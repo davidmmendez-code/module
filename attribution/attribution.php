@@ -102,6 +102,16 @@ class Attribution extends Module
      */
     public function hookDisplayHeader($params)
     {
+        // A tracking failure must never break the storefront page.
+        try {
+            $this->trackVisit();
+        } catch (Throwable $e) {
+            PrestaShopLogger::addLog('Attribution displayHeader: ' . $e->getMessage(), 3, null, 'Attribution');
+        }
+    }
+
+    private function trackVisit(): void
+    {
         if ($this->isBot()) {
             return;
         }
@@ -119,19 +129,23 @@ class Attribution extends Module
 
         $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
         $seen = (int) ($cookie->{self::COOKIE_SESSION_SEEN} ?? 0);
-        if ($sid === '' || ($now - $seen) > self::SESSION_TIMEOUT) {
+        $newSession = $sid === '' || ($now - $seen) > self::SESSION_TIMEOUT;
+        if ($newSession) {
             $sid = bin2hex(random_bytes(16));
             $this->createSession($sid, $touch, $referrer);
         }
 
-        $cookie->{self::COOKIE_SESSION} = $sid;
-        $cookie->{self::COOKIE_SESSION_SEEN} = $now;
+        // Write the cookie only when something changed, refreshing the activity time at most once a minute.
+        if ($newSession || $touch !== null || ($now - $seen) >= 60) {
+            $cookie->{self::COOKIE_SESSION} = $sid;
+            $cookie->{self::COOKIE_SESSION_SEEN} = $now;
 
-        if ($touch !== null) {
-            $this->storeTouchpoint($touch);
+            if ($touch !== null) {
+                $this->storeTouchpoint($touch);
+            }
+
+            $cookie->write();
         }
-
-        $cookie->write();
     }
 
     /**
@@ -144,6 +158,16 @@ class Attribution extends Module
             return;
         }
 
+        // Attribution must never block or break the order creation.
+        try {
+            $this->linkOrder($order);
+        } catch (Throwable $e) {
+            PrestaShopLogger::addLog('Attribution actionValidateOrder: ' . $e->getMessage(), 3, null, 'Attribution');
+        }
+    }
+
+    private function linkOrder(Order $order): void
+    {
         $cookie = Context::getContext()->cookie;
         $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
         $touchpoints = $this->readTouchpoints();
