@@ -10,7 +10,8 @@ if (!defined('_PS_VERSION_')) {
 
 require_once __DIR__ . '/classes/ChannelClassifier.php';
 require_once __DIR__ . '/classes/AttributionReport.php';
-require_once __DIR__ . '/classes/AttributionPanel.php';
+require_once __DIR__ . '/classes/AttributionDashboardData.php';
+require_once __DIR__ . '/classes/AttributionDashboard.php';
 
 class Attribution extends Module
 {
@@ -75,7 +76,7 @@ class Attribution extends Module
             $to = (string) Tools::getValue('to', date('Y-m-d'));
             $formAction = $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name]);
 
-            return '<div class="panel">' . $title . AttributionPanel::render($formAction, $from, $to) . '</div>';
+            return '<div class="panel">' . $title . AttributionDashboard::render($formAction, $from, $to) . '</div>';
         } catch (Throwable $e) {
             // Show the real reason instead of a generic 500 page.
             return '<div class="alert alert-danger"><strong>Attribution: error al cargar el panel.</strong><br>'
