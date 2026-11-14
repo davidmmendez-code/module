@@ -10,6 +10,7 @@ if (!defined('_PS_VERSION_')) {
 
 require_once __DIR__ . '/classes/ChannelClassifier.php';
 require_once __DIR__ . '/classes/AttributionReport.php';
+require_once __DIR__ . '/classes/AttributionPanel.php';
 
 class Attribution extends Module
 {
@@ -40,7 +41,6 @@ class Attribution extends Module
     {
         return parent::install()
             && $this->runSql(__DIR__ . '/sql/install.php')
-            && $this->installTab()
             && $this->registerHook('displayHeader')
             && $this->registerHook('actionValidateOrder');
     }
@@ -64,19 +64,21 @@ class Attribution extends Module
         return true;
     }
 
-    private function installTab(): bool
+    /**
+     * Module configuration page (Módulos → Configurar). Shows the attribution panel.
+     */
+    public function getContent()
     {
-        $tab = new Tab();
-        $tab->active = 1;
-        $tab->class_name = self::TAB_CLASS;
-        $tab->module = $this->name;
-        $tab->id_parent = (int) Tab::getIdFromClassName('AdminStats');
-        foreach (Language::getLanguages(false) as $lang) {
-            $tab->name[$lang['id_lang']] = 'Attribution';
-        }
-        return (bool) $tab->add();
+        $from = (string) Tools::getValue('from', date('Y-m-d', strtotime('-30 days')));
+        $to = (string) Tools::getValue('to', date('Y-m-d'));
+        $formAction = $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name]);
+
+        return '<div class="panel"><div class="panel-heading">' . $this->trans('Attribution', [], 'Modules.Attribution.Admin') . '</div>'
+            . AttributionPanel::render($formAction, $from, $to)
+            . '</div>';
     }
 
+    /** Removes the Stats menu entry created by v0.2.0 (kept so uninstall cleans it up). */
     private function uninstallTab(): bool
     {
         $id = (int) Tab::getIdFromClassName(self::TAB_CLASS);
