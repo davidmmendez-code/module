@@ -142,13 +142,26 @@ class ChannelClassifier
     /** "dev.shop.com" -> "shop.com" */
     private static function baseDomain(string $host): string
     {
-        return implode('.', array_slice(explode('.', $host), -2));
+        return self::registrableDomain($host);
     }
 
     /** "www.google.es" -> "google", "m.facebook.com" -> "facebook" */
     private static function domainLabel(string $host): string
     {
+        return explode('.', self::registrableDomain($host))[0];
+    }
+
+    /** Second-level suffixes like .co.uk or .com.mx need one more label. */
+    const TWO_PART_SUFFIXES = ['co', 'com', 'org', 'net', 'gob', 'edu', 'gov', 'ac'];
+
+    /** "www.google.co.uk" -> "google.co.uk", "dev.shop.com" -> "shop.com" */
+    public static function registrableDomain(string $host): string
+    {
         $parts = explode('.', $host);
-        return count($parts) >= 2 ? $parts[count($parts) - 2] : $host;
+        $n = count($parts);
+        if ($n >= 3 && strlen($parts[$n - 1]) === 2 && in_array($parts[$n - 2], self::TWO_PART_SUFFIXES, true)) {
+            return implode('.', array_slice($parts, -3));
+        }
+        return implode('.', array_slice($parts, -2));
     }
 }

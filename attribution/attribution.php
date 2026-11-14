@@ -19,7 +19,7 @@ class Attribution extends Module
     const COOKIE_SESSION = 'attr_sid';
     const COOKIE_SESSION_SEEN = 'attr_sid_seen';
     const SESSION_TIMEOUT = 1800; // 30 min of inactivity starts a new visit
-    const MAX_TOUCHPOINTS = 20;
+    const MAX_TOUCHPOINTS = 5; // cookie budget: browsers drop cookies over ~4 KB
     const TAB_CLASS = 'AdminAttribution';
 
     public function __construct()
@@ -29,7 +29,7 @@ class Attribution extends Module
         $this->version = '0.2.0';
         $this->author = 'TBD';
         $this->need_instance = 0;
-        $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => _PS_VERSION_];
+        $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '8.99.99'];
         $this->bootstrap = true;
 
         parent::__construct();
@@ -117,15 +117,14 @@ class Attribution extends Module
         }
 
         $cookie = Context::getContext()->cookie;
+        if (!$cookie) {
+            return;
+        }
         $referrer = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
         $ownHost = (string) parse_url(Tools::getShopDomainSsl(false), PHP_URL_HOST);
         $now = time();
 
         $touch = ChannelClassifier::fromRequest($_GET, $referrer, $ownHost);
-        if ($touch !== null) {
-            $touch['landing_page'] = substr((string) ($_SERVER['REQUEST_URI'] ?? ''), 0, 500);
-            $touch['ts'] = $now;
-        }
 
         $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
         $seen = (int) ($cookie->{self::COOKIE_SESSION_SEEN} ?? 0);
@@ -187,7 +186,7 @@ class Attribution extends Module
             'last_medium' => pSQL($last['medium'] ?? ''),
             'last_campaign' => pSQL($last['campaign'] ?? ''),
             'touchpoints' => pSQL(json_encode($touchpoints), true),
-            'total_price' => (float) $order->total_paid_tax_incl,
+            'total_price' => self::toDefaultCurrency($order),
             'date_add' => date('Y-m-d H:i:s'),
         ], false, true, Db::REPLACE);
 
@@ -199,6 +198,14 @@ class Attribution extends Module
                 'id_session = "' . pSQL($sid) . '" AND id_order = 0'
             );
         }
+    }
+
+    /** Revenue in the shop's default currency (Order::conversion_rate is relative to it). */
+    private static function toDefaultCurrency(Order $order): float
+    {
+        $rate = (float) $order->conversion_rate;
+        $amount = (float) $order->total_paid_tax_incl;
+        return $rate > 0 ? round($amount / $rate, 6) : $amount;
     }
 
     private function createSession(string $sid, ?array $touch, string $referrer): void
@@ -227,7 +234,8 @@ class Attribution extends Module
             return;
         }
 
-        $list[] = $touch;
+        // Compact copy: the browser cookie is shared with PrestaShop's own session data, so keep it small.
+        $list[] = array_intersect_key($touch, array_flip(['channel', 'source', 'medium', 'campaign', 'referrer']));
         $list = array_slice($list, -self::MAX_TOUCHPOINTS);
 
         $cookie->{self::COOKIE_TOUCH} = json_encode($list);

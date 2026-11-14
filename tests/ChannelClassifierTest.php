@@ -48,6 +48,15 @@ $check('dev. subdomain of own shop => null', null, $t);
 $t = ChannelClassifier::fromRequest([], 'https://www.paypal.com/checkoutnow', $own);
 $check('payment gateway referrer => null', null, $t);
 
+$t = ChannelClassifier::fromRequest([], 'https://www.google.co.uk/search?q=x', $own);
+$check('google.co.uk referrer => organic_search', 'organic_search', $t['channel']);
+
+$t = ChannelClassifier::fromRequest([], 'https://www.otra.co.uk/', 'mitienda.co.uk');
+$check('other .co.uk site is not own domain', 'referral', $t['channel']);
+
+$t = ChannelClassifier::fromRequest([], 'https://shop.mitienda.co.uk/', 'mitienda.co.uk');
+$check('subdomain of own .co.uk shop => null', null, $t);
+
 $t = ChannelClassifier::fromRequest(['utm_source' => 'GOOGLE', 'utm_medium' => 'CPC'], '', $own);
 $check('utm is case-insensitive', 'google_ads', $t['channel']);
 
