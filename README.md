@@ -33,9 +33,11 @@ attribution/
 tests/ChannelClassifierTest.php
 ```
 
-## Actualizar desde v0.1.0
+## Actualizar y desinstalar
 
-La versión 0.2.0 añade tablas y columnas nuevas. Desinstala y vuelve a instalar el módulo (esto borra los datos de la versión anterior).
+- **Actualizar:** sube el zip nuevo sobre la versión instalada. Los datos se conservan.
+- **Desinstalar:** quita el módulo y su menú, pero **conserva las tablas y los datos**. Al reinstalarlo, el historial sigue ahí.
+- Los cambios de esquema futuros deben llevar un script en `upgrade/`.
 
 ## Pendiente
 

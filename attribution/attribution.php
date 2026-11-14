@@ -26,7 +26,7 @@ class Attribution extends Module
     {
         $this->name = 'attribution';
         $this->tab = 'analytics_stats';
-        $this->version = '0.2.0';
+        $this->version = '0.2.1';
         $this->author = 'TBD';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '8.99.99'];
@@ -46,11 +46,13 @@ class Attribution extends Module
             && $this->registerHook('actionValidateOrder');
     }
 
+    /**
+     * Uninstalling keeps the collected data, so reinstalling or upgrading never loses history.
+     * Tables are not dropped here.
+     */
     public function uninstall()
     {
-        return $this->uninstallTab()
-            && $this->runSql(__DIR__ . '/sql/uninstall.php')
-            && parent::uninstall();
+        return $this->uninstallTab() && parent::uninstall();
     }
 
     private function runSql(string $file): bool
