@@ -69,13 +69,20 @@ class Attribution extends Module
      */
     public function getContent()
     {
-        $from = (string) Tools::getValue('from', date('Y-m-d', strtotime('-30 days')));
-        $to = (string) Tools::getValue('to', date('Y-m-d'));
-        $formAction = $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name]);
+        $title = '<div class="panel-heading">Attribution</div>';
+        try {
+            $from = (string) Tools::getValue('from', date('Y-m-d', strtotime('-30 days')));
+            $to = (string) Tools::getValue('to', date('Y-m-d'));
+            $formAction = $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name]);
 
-        return '<div class="panel"><div class="panel-heading">' . $this->trans('Attribution', [], 'Modules.Attribution.Admin') . '</div>'
-            . AttributionPanel::render($formAction, $from, $to)
-            . '</div>';
+            return '<div class="panel">' . $title . AttributionPanel::render($formAction, $from, $to) . '</div>';
+        } catch (Throwable $e) {
+            // Show the real reason instead of a generic 500 page.
+            return '<div class="alert alert-danger"><strong>Attribution: error al cargar el panel.</strong><br>'
+                . htmlspecialchars(get_class($e) . ': ' . $e->getMessage(), ENT_QUOTES, 'UTF-8')
+                . '<br><small>' . htmlspecialchars(basename($e->getFile()) . ':' . $e->getLine(), ENT_QUOTES, 'UTF-8')
+                . '</small></div>';
+        }
     }
 
     /** Removes the Stats menu entry created by v0.2.0 (kept so uninstall cleans it up). */
