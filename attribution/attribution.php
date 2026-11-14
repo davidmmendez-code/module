@@ -26,7 +26,7 @@ class Attribution extends Module
     {
         $this->name = 'attribution';
         $this->tab = 'analytics_stats';
-        $this->version = '0.2.1';
+        $this->version = '0.2.2';
         $this->author = 'TBD';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '8.99.99'];
@@ -72,6 +72,13 @@ class Attribution extends Module
      */
     public function getContent()
     {
+        $notice = Tools::isSubmit('purge_data') ? $this->purgeData() : '';
+
+        return $notice . $this->renderConfigure() . $this->dangerZone();
+    }
+
+    private function renderConfigure()
+    {
         $title = '<div class="panel-heading">Attribution</div>';
         try {
             $from = (string) Tools::getValue('from', date('Y-m-d', strtotime('-30 days')));
@@ -86,6 +93,37 @@ class Attribution extends Module
                 . '<br><small>' . htmlspecialchars(basename($e->getFile()) . ':' . $e->getLine(), ENT_QUOTES, 'UTF-8')
                 . '</small></div>';
         }
+    }
+
+    /** Deletes every recorded visit and order. Only runs when the user typed BORRAR. */
+    private function purgeData(): string
+    {
+        if (Tools::getValue('confirm_text') !== 'BORRAR') {
+            return '<div class="alert alert-warning">Para borrar los datos, escribe BORRAR en el campo de confirmación. No se ha borrado nada.</div>';
+        }
+
+        $db = Db::getInstance();
+        $ok = $db->execute('TRUNCATE TABLE `' . _DB_PREFIX_ . 'attribution_order`')
+            && $db->execute('TRUNCATE TABLE `' . _DB_PREFIX_ . 'attribution_session`');
+
+        return $ok
+            ? '<div class="alert alert-success">Datos borrados. El historial empieza de cero.</div>'
+            : '<div class="alert alert-danger">No se pudieron borrar los datos. Revisa el log de PrestaShop.</div>';
+    }
+
+    /** Danger zone at the bottom of the configure page. */
+    private function dangerZone(): string
+    {
+        $action = htmlspecialchars($this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name]), ENT_QUOTES, 'UTF-8');
+
+        return '<div class="panel"><div class="panel-heading">Zona de peligro</div>'
+            . '<form method="post" action="' . $action . '" style="padding:10px">'
+            . '<p>Borra <strong>todas</strong> las visitas y pedidos registrados por el módulo. No se puede deshacer. '
+            . 'Desinstalar el módulo no borra los datos.</p>'
+            . '<input type="hidden" name="purge_data" value="1">'
+            . '<label>Escribe BORRAR para confirmar&nbsp;<input type="text" name="confirm_text" autocomplete="off"></label> '
+            . '<button type="submit" class="btn btn-danger">Borrar todos los datos</button>'
+            . '</form></div>';
     }
 
     /** Removes the Stats menu entry created by v0.2.0 (kept so uninstall cleans it up). */
