@@ -3,7 +3,7 @@
  * Run with: php tests/ChannelClassifierTest.php
  * Pure PHP, no PrestaShop needed.
  */
-require __DIR__ . '/../attribution/classes/ChannelClassifier.php';
+require __DIR__ . '/../attribution/classes/AttributionChannelClassifier.php';
 
 $failures = 0;
 $check = function (string $name, $expected, $actual) use (&$failures) {
@@ -17,47 +17,47 @@ $check = function (string $name, $expected, $actual) use (&$failures) {
 
 $own = 'mitienda.com';
 
-$t = ChannelClassifier::fromRequest(['gclid' => 'abc'], '', $own);
+$t = AttributionChannelClassifier::fromRequest(['gclid' => 'abc'], '', $own);
 $check('gclid => google_ads', 'google_ads', $t['channel']);
 
-$t = ChannelClassifier::fromRequest(['utm_source' => 'facebook', 'utm_medium' => 'cpc', 'utm_campaign' => 'verano'], '', $own);
+$t = AttributionChannelClassifier::fromRequest(['utm_source' => 'facebook', 'utm_medium' => 'cpc', 'utm_campaign' => 'verano'], '', $own);
 $check('utm facebook cpc => meta_ads', 'meta_ads', $t['channel']);
 $check('utm campaign kept', 'verano', $t['campaign']);
 
-$t = ChannelClassifier::fromRequest(['utm_source' => 'newsletter', 'utm_medium' => 'email'], '', $own);
+$t = AttributionChannelClassifier::fromRequest(['utm_source' => 'newsletter', 'utm_medium' => 'email'], '', $own);
 $check('utm email => email', 'email', $t['channel']);
 
-$t = ChannelClassifier::fromRequest([], 'https://www.google.es/search?q=x', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://www.google.es/search?q=x', $own);
 $check('google referrer => organic_search', 'organic_search', $t['channel']);
 
-$t = ChannelClassifier::fromRequest([], 'https://m.facebook.com/', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://m.facebook.com/', $own);
 $check('facebook referrer => organic_social', 'organic_social', $t['channel']);
 
-$t = ChannelClassifier::fromRequest([], 'https://blog.ejemplo.com/post', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://blog.ejemplo.com/post', $own);
 $check('other referrer => referral', 'referral', $t['channel']);
 
-$t = ChannelClassifier::fromRequest([], 'https://www.mitienda.com/categoria', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://www.mitienda.com/categoria', $own);
 $check('own domain referrer => null', null, $t);
 
-$t = ChannelClassifier::fromRequest([], '', $own);
+$t = AttributionChannelClassifier::fromRequest([], '', $own);
 $check('no signal => null', null, $t);
 
-$t = ChannelClassifier::fromRequest([], 'https://dev.mitienda.com/categoria', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://dev.mitienda.com/categoria', $own);
 $check('dev. subdomain of own shop => null', null, $t);
 
-$t = ChannelClassifier::fromRequest([], 'https://www.paypal.com/checkoutnow', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://www.paypal.com/checkoutnow', $own);
 $check('payment gateway referrer => null', null, $t);
 
-$t = ChannelClassifier::fromRequest([], 'https://www.google.co.uk/search?q=x', $own);
+$t = AttributionChannelClassifier::fromRequest([], 'https://www.google.co.uk/search?q=x', $own);
 $check('google.co.uk referrer => organic_search', 'organic_search', $t['channel']);
 
-$t = ChannelClassifier::fromRequest([], 'https://www.otra.co.uk/', 'mitienda.co.uk');
+$t = AttributionChannelClassifier::fromRequest([], 'https://www.otra.co.uk/', 'mitienda.co.uk');
 $check('other .co.uk site is not own domain', 'referral', $t['channel']);
 
-$t = ChannelClassifier::fromRequest([], 'https://shop.mitienda.co.uk/', 'mitienda.co.uk');
+$t = AttributionChannelClassifier::fromRequest([], 'https://shop.mitienda.co.uk/', 'mitienda.co.uk');
 $check('subdomain of own .co.uk shop => null', null, $t);
 
-$t = ChannelClassifier::fromRequest(['utm_source' => 'GOOGLE', 'utm_medium' => 'CPC'], '', $own);
+$t = AttributionChannelClassifier::fromRequest(['utm_source' => 'GOOGLE', 'utm_medium' => 'CPC'], '', $own);
 $check('utm is case-insensitive', 'google_ads', $t['channel']);
 
 echo $failures === 0 ? "\nAll tests passed.\n" : "\n$failures test(s) failed.\n";

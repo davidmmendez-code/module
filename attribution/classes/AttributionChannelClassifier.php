@@ -3,7 +3,7 @@
  * Maps a request (UTM params, click IDs, referrer) to a marketing channel.
  * Pure logic, no PrestaShop dependencies, so it can be unit-tested on its own.
  */
-class ChannelClassifier
+class AttributionChannelClassifier
 {
     /** Click ID parameter => platform channel. */
     const CLICK_IDS = [

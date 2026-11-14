@@ -8,7 +8,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-require_once __DIR__ . '/classes/ChannelClassifier.php';
+require_once __DIR__ . '/classes/AttributionChannelClassifier.php';
 require_once __DIR__ . '/classes/AttributionReport.php';
 require_once __DIR__ . '/classes/AttributionDashboardData.php';
 require_once __DIR__ . '/classes/AttributionDashboard.php';
@@ -146,7 +146,7 @@ class Attribution extends Module
         try {
             $this->trackVisit();
         } catch (Throwable $e) {
-            PrestaShopLogger::addLog('Attribution displayHeader: ' . $e->getMessage(), 3, null, 'Attribution');
+            error_log('Attribution displayHeader: ' . $e->getMessage());
         }
     }
 
@@ -164,7 +164,7 @@ class Attribution extends Module
         $ownHost = (string) parse_url(Tools::getShopDomainSsl(false), PHP_URL_HOST);
         $now = time();
 
-        $touch = ChannelClassifier::fromRequest($_GET, $referrer, $ownHost);
+        $touch = AttributionChannelClassifier::fromRequest($_GET, $referrer, $ownHost);
 
         $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
         $seen = (int) ($cookie->{self::COOKIE_SESSION_SEEN} ?? 0);
@@ -201,7 +201,7 @@ class Attribution extends Module
         try {
             $this->linkOrder($order);
         } catch (Throwable $e) {
-            PrestaShopLogger::addLog('Attribution actionValidateOrder: ' . $e->getMessage(), 3, null, 'Attribution');
+            error_log('Attribution actionValidateOrder: ' . $e->getMessage());
         }
     }
 
