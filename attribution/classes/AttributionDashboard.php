@@ -141,11 +141,12 @@ class AttributionDashboard
             . '<th>Canal</th><th>Campaña</th><th class="r">Visitas</th><th class="r">Pedidos</th><th class="r">Conversión</th><th class="r">Ingresos</th>'
             . '</tr></thead><tbody>';
         if (!$d['campaigns']) {
-            $html .= '<tr><td colspan="6" class="ad-muted">Sin datos en este periodo.</td></tr>';
+            $html .= '<tr><td colspan="7" class="ad-muted">Sin datos en este periodo.</td></tr>';
         }
         foreach ($d['campaigns'] as $c) {
             $html .= '<tr><td>' . $name($c['channel']) . '</td>'
                 . '<td>' . ($c['campaign'] !== '' ? $h($c['campaign']) : '<span class="ad-muted">(sin campaña)</span>') . '</td>'
+                . '<td>' . self::sourceMedium($c['source'] ?? '', $c['medium'] ?? '') . '</td>'
                 . '<td class="r">' . (int) $c['sessions'] . '</td>'
                 . '<td class="r">' . (int) $c['orders'] . '</td>'
                 . '<td class="r">' . $pct($c['conversion_rate']) . '</td>'
@@ -174,8 +175,8 @@ class AttributionDashboard
                 . '<td>' . $h($o['date_add']) . '</td>'
                 . '<td class="r">' . $money($o['total_price']) . '</td>'
                 . '<td>' . $name($o['visit_channel']) . '</td>'
-                . '<td>' . $name($o['first_channel']) . ($o['first_campaign'] !== '' ? ' · ' . $h($o['first_campaign']) : '') . '</td>'
-                . '<td>' . $name($o['last_channel']) . ($o['last_campaign'] !== '' ? ' · ' . $h($o['last_campaign']) : '') . '</td>'
+                . '<td>' . $name($o['first_channel']) . self::touchDetail($o['first_source'] ?? '', $o['first_medium'] ?? '', $o['first_campaign'] ?? '') . '</td>'
+                . '<td>' . $name($o['last_channel']) . self::touchDetail($o['last_source'] ?? '', $o['last_medium'] ?? '', $o['last_campaign'] ?? '') . '</td>'
                 . '<td>' . ($lastReferrer !== '' ? $h($lastReferrer) : '<span class="ad-muted">–</span>') . '</td></tr>';
         }
         $html .= '</tbody></table></div></div>';
@@ -241,6 +242,31 @@ class AttributionDashboard
                 date('Y-m-t', strtotime('last day of last month')),
             ],
         ];
+    }
+
+    /** "google / cpc" as an escaped label, or a dash when the visit had no UTM source. */
+    private static function sourceMedium(string $source, string $medium): string
+    {
+        if ($source === '' && $medium === '') {
+            return '<span class="ad-muted">–</span>';
+        }
+        return htmlspecialchars(($source !== '' ? $source : '(sin fuente)') . ' / ' . ($medium !== '' ? $medium : '(sin medio)'), ENT_QUOTES, 'UTF-8');
+    }
+
+    /** Second line under a channel: utm source / medium and campaign, when present. */
+    private static function touchDetail(string $source, string $medium, string $campaign): string
+    {
+        if ($source === '' && $medium === '' && $campaign === '') {
+            return '';
+        }
+        $parts = [];
+        if ($source !== '' || $medium !== '') {
+            $parts[] = self::sourceMedium($source, $medium);
+        }
+        if ($campaign !== '') {
+            $parts[] = htmlspecialchars($campaign, ENT_QUOTES, 'UTF-8');
+        }
+        return '<br><small class="ad-muted">' . implode(' · ', $parts) . '</small>';
     }
 
     private static function fmtDate(string $ymd): string

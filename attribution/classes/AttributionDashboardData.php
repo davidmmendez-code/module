@@ -144,14 +144,14 @@ class AttributionDashboardData
         [$start, $end] = self::bounds($from, $to);
 
         $rows = $db->executeS(
-            "SELECT s.channel, s.campaign,
+            "SELECT s.channel, s.source, s.medium, s.campaign,
                     COUNT(DISTINCT s.id_session) AS sessions,
                     COUNT(o.id_order) AS orders,
                     COALESCE(SUM(o.total_price), 0) AS revenue
              FROM {$p}attribution_session s
              LEFT JOIN {$p}attribution_order o ON o.id_session = s.id_session
              WHERE s.date_add BETWEEN '$start' AND '$end'
-             GROUP BY s.channel, s.campaign
+             GROUP BY s.channel, s.source, s.medium, s.campaign
              ORDER BY revenue DESC, sessions DESC
              LIMIT " . (int) $limit
         ) ?: [];
@@ -215,7 +215,8 @@ class AttributionDashboardData
         return $db->executeS(
             "SELECT o.id_order, o.date_add, o.total_price, o.touchpoints,
                     COALESCE(s.channel, 'sin_sesion') AS visit_channel,
-                    o.first_channel, o.first_campaign, o.last_channel, o.last_campaign
+                    o.first_channel, o.first_source, o.first_medium, o.first_campaign,
+                    o.last_channel, o.last_source, o.last_medium, o.last_campaign
              FROM {$p}attribution_order o
              LEFT JOIN {$p}attribution_session s ON s.id_session = o.id_session
              WHERE $where
