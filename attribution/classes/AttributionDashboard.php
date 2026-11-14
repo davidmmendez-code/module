@@ -138,7 +138,7 @@ class AttributionDashboard
 
         // Campaigns.
         $html .= '<div class="ad-card"><h3>Campañas y fuentes con más ingresos</h3><div class="ad-scroll"><table class="ad-table"><thead><tr>'
-            . '<th>Canal</th><th>Campaña</th><th class="r">Visitas</th><th class="r">Pedidos</th><th class="r">Conversión</th><th class="r">Ingresos</th>'
+            . '<th>Canal</th><th>Campaña</th><th>Fuente / medio</th><th class="r">Visitas</th><th class="r">Pedidos</th><th class="r">Conversión</th><th class="r">Ingresos</th>'
             . '</tr></thead><tbody>';
         if (!$d['campaigns']) {
             $html .= '<tr><td colspan="7" class="ad-muted">Sin datos en este periodo.</td></tr>';
