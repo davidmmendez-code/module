@@ -42,6 +42,12 @@ $check('own domain referrer => null', null, $t);
 $t = ChannelClassifier::fromRequest([], '', $own);
 $check('no signal => null', null, $t);
 
+$t = ChannelClassifier::fromRequest([], 'https://dev.mitienda.com/categoria', $own);
+$check('dev. subdomain of own shop => null', null, $t);
+
+$t = ChannelClassifier::fromRequest([], 'https://www.paypal.com/checkoutnow', $own);
+$check('payment gateway referrer => null', null, $t);
+
 $t = ChannelClassifier::fromRequest(['utm_source' => 'GOOGLE', 'utm_medium' => 'CPC'], '', $own);
 $check('utm is case-insensitive', 'google_ads', $t['channel']);
 

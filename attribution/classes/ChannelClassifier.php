@@ -24,6 +24,9 @@ class ChannelClassifier
 
     const PAID_MEDIUMS = ['cpc', 'ppc', 'paid', 'paidsocial', 'paid_social', 'display', 'cpm', 'paidsearch'];
 
+    /** Payment gateways redirect back to the shop; they must not replace the visit's real source. */
+    const PAYMENT_GATEWAYS = ['paypal', 'redsys', 'stripe', 'bizum', 'sermepa', 'sequra', 'klarna'];
+
     /**
      * @return array|null  null when the request carries no acquisition signal
      */
@@ -47,11 +50,14 @@ class ChannelClassifier
 
         // 3. Referrer-based.
         $host = self::host($referrer);
-        if ($host === '' || $host === self::normalizeHost($ownHost)) {
-            return null; // Internal navigation or no referrer at all.
+        if ($host === '' || self::isOwnDomain($host, $ownHost)) {
+            return null; // Internal navigation (including dev./www. variants) or no referrer.
         }
 
         $label = self::domainLabel($host);
+        if (in_array($label, self::PAYMENT_GATEWAYS, true)) {
+            return null; // Keep the campaign that brought the visit.
+        }
         if (in_array($label, self::SEARCH_ENGINES, true)) {
             return self::touch('organic_search', $label, 'organic', '', $referrer);
         }
@@ -121,6 +127,22 @@ class ChannelClassifier
     private static function normalizeHost(string $host): string
     {
         return preg_replace('/^www\./', '', strtolower($host));
+    }
+
+    /** True when both hosts share the same registrable domain (dev.shop.com and shop.com). */
+    private static function isOwnDomain(string $host, string $ownHost): bool
+    {
+        $own = self::normalizeHost($ownHost);
+        if ($own === '') {
+            return false;
+        }
+        return self::baseDomain($host) === self::baseDomain($own);
+    }
+
+    /** "dev.shop.com" -> "shop.com" */
+    private static function baseDomain(string $host): string
+    {
+        return implode('.', array_slice(explode('.', $host), -2));
     }
 
     /** "www.google.es" -> "google", "m.facebook.com" -> "facebook" */

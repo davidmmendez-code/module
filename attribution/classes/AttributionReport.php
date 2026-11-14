@@ -78,7 +78,7 @@ class AttributionReport
         [$start, $end] = self::range($from, $to);
 
         return $db->executeS(
-            "SELECT o.id_order, o.date_add, o.total_price,
+            "SELECT o.id_order, o.date_add, o.total_price, o.touchpoints,
                     COALESCE(s.channel, 'sin_sesion') AS visit_channel,
                     o.first_channel, o.first_campaign,
                     o.last_channel, o.last_campaign

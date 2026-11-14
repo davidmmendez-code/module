@@ -54,12 +54,16 @@ class AttributionPanel
         $html .= '<h3>Últimos pedidos</h3>'
             . '<table class="table"><thead><tr>'
             . '<th>Pedido</th><th>Fecha</th><th>Importe</th><th>Canal de la visita</th>'
-            . '<th>Primer clic</th><th>Último clic</th>'
+            . '<th>Primer clic</th><th>Último clic</th><th>Referrer último clic</th>'
             . '</tr></thead><tbody>';
         if (!$orders) {
-            $html .= '<tr><td colspan="6">No hay pedidos en este periodo.</td></tr>';
+            $html .= '<tr><td colspan="7">No hay pedidos en este periodo.</td></tr>';
         }
         foreach ($orders as $o) {
+            $touches = json_decode((string) ($o['touchpoints'] ?? ''), true);
+            $lastTouch = is_array($touches) && $touches ? end($touches) : [];
+            $lastReferrer = (string) ($lastTouch['referrer'] ?? '');
+
             $html .= '<tr>'
                 . '<td>#' . (int) $o['id_order'] . '</td>'
                 . '<td>' . $h($o['date_add']) . '</td>'
@@ -67,6 +71,7 @@ class AttributionPanel
                 . '<td>' . $h($o['visit_channel']) . '</td>'
                 . '<td>' . $h($o['first_channel']) . ($o['first_campaign'] !== '' ? ' · ' . $h($o['first_campaign']) : '') . '</td>'
                 . '<td>' . $h($o['last_channel']) . ($o['last_campaign'] !== '' ? ' · ' . $h($o['last_campaign']) : '') . '</td>'
+                . '<td>' . ($lastReferrer !== '' ? $h($lastReferrer) : '–') . '</td>'
                 . '</tr>';
         }
         $html .= '</tbody></table>';
