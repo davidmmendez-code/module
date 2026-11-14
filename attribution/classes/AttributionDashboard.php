@@ -23,34 +23,48 @@ class AttributionDashboard
 
     /**
      * @param string $baseUrl  module configure URL (already contains the token and "?")
+     * @param string $model    attribution model: last | first | linear
+     * @param string $channel  visit channel to filter the orders list ('' = all)
      */
-    public static function render(string $baseUrl, string $from, string $to): string
+    public static function render(string $baseUrl, string $from, string $to, string $model = 'last', string $channel = ''): string
     {
-        $d = AttributionDashboardData::build($from, $to);
+        $d = AttributionDashboardData::build($from, $to, $model, $channel);
         $r = $d['range'];
+        $m = $d['model'];
         $cur = $d['current'];
         $prev = $d['previous'];
 
         $h = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
         $money = fn($v) => $v === null ? '–' : Tools::displayPrice((float) $v);
         $pct = fn($v) => $v === null ? '–' : number_format((float) $v, 1, ',', '.') . ' %';
+        $num = fn($v) => self::fmtNum((float) $v);
         $name = fn($c) => $h(self::CHANNEL_NAMES[$c] ?? $c);
+        $url = fn(array $params) => $h($baseUrl . '&' . http_build_query(array_merge(
+            ['from' => $r['from'], 'to' => $r['to'], 'model' => $m],
+            $params
+        )));
 
         $html = '<style>' . self::css() . '</style><div class="ad">';
 
-        // Header: title, presets and custom range.
+        // Header: title, presets.
         $html .= '<div class="ad-head"><div><h2 class="ad-title">Analítica de atribución</h2>'
-            . '<div class="ad-sub">' . $h(self::fmtDate($r['from'])) . ' – ' . $h(self::fmtDate($r['to'])) . '</div></div>'
+            . '<div class="ad-sub">' . $h(self::fmtDate($r['from'])) . ' – ' . $h(self::fmtDate($r['to'])) . ' · Modelo: ' . $h(AttributionDashboardData::MODELS[$m]) . '</div></div>'
             . '<div class="ad-presets">';
         foreach (self::presets() as $label => [$pf, $pt]) {
             $active = ($pf === $r['from'] && $pt === $r['to']) ? ' ad-active' : '';
-            $html .= '<a class="ad-preset' . $active . '" href="' . $h($baseUrl . '&from=' . $pf . '&to=' . $pt) . '">' . $h($label) . '</a>';
+            $html .= '<a class="ad-preset' . $active . '" href="' . $url(['from' => $pf, 'to' => $pt, 'ch' => '']) . '">' . $h($label) . '</a>';
         }
         $html .= '</div></div>';
 
+        // Custom range and attribution model.
         $html .= '<form method="post" action="' . $h($baseUrl) . '" class="ad-range">'
             . '<label>Desde <input type="date" name="from" value="' . $h($r['from']) . '"></label>'
             . '<label>Hasta <input type="date" name="to" value="' . $h($r['to']) . '"></label>'
+            . '<label>Modelo <select name="model">';
+        foreach (AttributionDashboardData::MODELS as $key => $label) {
+            $html .= '<option value="' . $h($key) . '"' . ($key === $m ? ' selected' : '') . '>' . $h($label) . '</option>';
+        }
+        $html .= '</select></label>'
             . '<button type="submit" class="btn btn-default">Aplicar</button></form>';
 
         // KPIs with comparison to the previous period.
@@ -71,8 +85,10 @@ class AttributionDashboard
             . '</div>';
 
         // Revenue by channel (bars) and channel table.
-        $html .= '<div class="ad-row">'
-            . '<div class="ad-card"><h3>Ingresos por canal</h3>';
+        $modelNote = $m === 'linear'
+            ? 'Cada pedido se reparte entre los canales de sus clics.'
+            : ($m === 'first' ? 'Cada pedido se asigna al canal del primer clic.' : 'Cada pedido se asigna al canal del último clic.');
+        $html .= '<div class="ad-row"><div class="ad-card"><h3>Ingresos por canal</h3>';
         if (!$d['channels']) {
             $html .= '<p class="ad-muted">Sin datos en este periodo.</p>';
         }
@@ -83,17 +99,21 @@ class AttributionDashboard
                 . '<div class="ad-muted ad-small">' . $pct($c['share']) . ' de los ingresos</div>'
                 . '</div>';
         }
-        $html .= '</div><div class="ad-card"><h3>Detalle por canal</h3><div class="ad-scroll"><table class="ad-table"><thead><tr>'
-            . '<th>Canal</th><th class="r">Visitas</th><th class="r">Pedidos</th><th class="r">Conversión</th><th class="r">Ingresos</th><th class="r">Ticket</th><th class="r">% ingresos</th>'
+        $html .= '</div><div class="ad-card"><h3>Detalle por canal</h3><p class="ad-muted ad-small">' . $h($modelNote) . '</p>'
+            . '<div class="ad-scroll"><table class="ad-table"><thead><tr>'
+            . '<th>Canal</th><th class="r">Visitas</th><th class="r">Pedidos</th><th class="r">Conversión</th>'
+            . '<th class="r">Nuevos</th><th class="r">Recurrentes</th><th class="r">Ingresos</th><th class="r">Ticket</th><th class="r">% ingresos</th>'
             . '</tr></thead><tbody>';
         if (!$d['channels']) {
-            $html .= '<tr><td colspan="7" class="ad-muted">Sin datos en este periodo.</td></tr>';
+            $html .= '<tr><td colspan="9" class="ad-muted">Sin datos en este periodo.</td></tr>';
         }
         foreach ($d['channels'] as $c) {
             $html .= '<tr><td>' . $name($c['channel']) . '</td>'
                 . '<td class="r">' . (int) $c['sessions'] . '</td>'
-                . '<td class="r">' . (int) $c['orders'] . '</td>'
+                . '<td class="r">' . $num($c['orders']) . '</td>'
                 . '<td class="r">' . $pct($c['conversion_rate']) . '</td>'
+                . '<td class="r">' . $num($c['new']) . '</td>'
+                . '<td class="r">' . $num($c['returning']) . '</td>'
                 . '<td class="r">' . $money($c['revenue']) . '</td>'
                 . '<td class="r">' . $money($c['avg_order']) . '</td>'
                 . '<td class="r">' . $pct($c['share']) . '</td></tr>';
@@ -133,8 +153,13 @@ class AttributionDashboard
         }
         $html .= '</tbody></table></div></div>';
 
-        // Recent orders.
-        $html .= '<div class="ad-card"><h3>Últimos pedidos</h3><div class="ad-scroll"><table class="ad-table"><thead><tr>'
+        // Recent orders, filterable by visit channel.
+        $html .= '<div class="ad-card"><h3>Últimos pedidos</h3>'
+            . '<div class="ad-chips"><a class="ad-preset' . ($channel === '' ? ' ad-active' : '') . '" href="' . $url(['ch' => '']) . '">Todos</a>';
+        foreach ($d['channel_options'] as $opt) {
+            $html .= '<a class="ad-preset' . ($channel === $opt ? ' ad-active' : '') . '" href="' . $url(['ch' => $opt]) . '">' . $name($opt) . '</a>';
+        }
+        $html .= '</div><div class="ad-scroll"><table class="ad-table"><thead><tr>'
             . '<th>Pedido</th><th>Fecha</th><th class="r">Importe</th><th>Canal de la visita</th><th>Primer clic</th><th>Último clic</th><th>Referrer último clic</th>'
             . '</tr></thead><tbody>';
         if (!$d['orders']) {
@@ -156,6 +181,14 @@ class AttributionDashboard
         $html .= '</tbody></table></div></div>';
 
         return $html . '</div>';
+    }
+
+    /** Shows whole numbers without decimals and fractional attributions with one decimal. */
+    private static function fmtNum(float $v): string
+    {
+        return abs($v - round($v)) < 0.005
+            ? (string) (int) round($v)
+            : number_format($v, 1, ',', '.');
     }
 
     private static function kpi(string $label, string $value, string $delta, string $hint): string
@@ -225,12 +258,13 @@ class AttributionDashboard
 .ad-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:12px}
 .ad-sub,.ad-muted{color:#6b7280}
 .ad-small{font-size:12px}
-.ad-presets{display:flex;flex-wrap:wrap;gap:6px}
+.ad-presets,.ad-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ad-chips{margin-bottom:12px}
 .ad-preset{padding:5px 10px;border:1px solid #d1d5db;border-radius:999px;color:#374151;text-decoration:none;font-size:12px;background:#fff}
 .ad-preset:hover{border-color:#4f46e5;color:#4f46e5}
 .ad-preset.ad-active{background:#4f46e5;border-color:#4f46e5;color:#fff}
 .ad-range{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
-.ad-range input[type=date]{padding:4px 6px;border:1px solid #d1d5db;border-radius:6px}
+.ad-range input[type=date],.ad-range select{padding:4px 6px;border:1px solid #d1d5db;border-radius:6px}
 .ad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px}
 .ad-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px;min-width:0}
 .ad-kpi-label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}

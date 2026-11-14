@@ -76,7 +76,7 @@ class Attribution extends Module
             $to = (string) Tools::getValue('to', date('Y-m-d'));
             $formAction = $this->context->link->getAdminLink('AdminModules', true, [], ['configure' => $this->name]);
 
-            return '<div class="panel">' . $title . AttributionDashboard::render($formAction, $from, $to) . '</div>';
+            return '<div class="panel">' . $title . AttributionDashboard::render($formAction, $from, $to, (string) Tools::getValue('model', 'last'), (string) Tools::getValue('ch', '')) . '</div>';
         } catch (Throwable $e) {
             // Show the real reason instead of a generic 500 page.
             return '<div class="alert alert-danger"><strong>Attribution: error al cargar el panel.</strong><br>'
