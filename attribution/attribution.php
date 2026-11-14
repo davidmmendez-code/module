@@ -1,6 +1,6 @@
 <?php
 /**
- * Attribution – captures the acquisition source of each visit and links it to orders.
+ * Attribution – tracks visits (sessions), their acquisition channel and the orders they produce.
  * Target: PrestaShop 8.x (PS 1.7 adaptation to follow).
  */
 
@@ -9,18 +9,22 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once __DIR__ . '/classes/ChannelClassifier.php';
+require_once __DIR__ . '/classes/AttributionReport.php';
 
 class Attribution extends Module
 {
-    const COOKIE_KEY = 'attr_touch';
-    const COOKIE_TTL_DAYS = 90;
+    const COOKIE_TOUCH = 'attr_touch';
+    const COOKIE_SESSION = 'attr_sid';
+    const COOKIE_SESSION_SEEN = 'attr_sid_seen';
+    const SESSION_TIMEOUT = 1800; // 30 min of inactivity starts a new visit
     const MAX_TOUCHPOINTS = 20;
+    const TAB_CLASS = 'AdminAttribution';
 
     public function __construct()
     {
         $this->name = 'attribution';
         $this->tab = 'analytics_stats';
-        $this->version = '0.1.0';
+        $this->version = '0.2.0';
         $this->author = 'TBD';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => _PS_VERSION_];
@@ -29,20 +33,23 @@ class Attribution extends Module
         parent::__construct();
 
         $this->displayName = $this->trans('Attribution', [], 'Modules.Attribution.Admin');
-        $this->description = $this->trans('Tracks traffic sources and links them to orders.', [], 'Modules.Attribution.Admin');
+        $this->description = $this->trans('Tracks traffic sources, visits and conversions.', [], 'Modules.Attribution.Admin');
     }
 
     public function install()
     {
         return parent::install()
             && $this->runSql(__DIR__ . '/sql/install.php')
+            && $this->installTab()
             && $this->registerHook('displayHeader')
             && $this->registerHook('actionValidateOrder');
     }
 
     public function uninstall()
     {
-        return $this->runSql(__DIR__ . '/sql/uninstall.php') && parent::uninstall();
+        return $this->uninstallTab()
+            && $this->runSql(__DIR__ . '/sql/uninstall.php')
+            && parent::uninstall();
     }
 
     private function runSql(string $file): bool
@@ -57,33 +64,68 @@ class Attribution extends Module
         return true;
     }
 
-    /**
-     * Runs on every front-office page: records the touchpoint when the visitor
-     * arrives with campaign parameters or from an external referrer.
-     */
-    public function hookDisplayHeader($params)
+    private function installTab(): bool
     {
-        if (Context::getContext()->controller === null) {
-            return;
+        $tab = new Tab();
+        $tab->active = 1;
+        $tab->class_name = self::TAB_CLASS;
+        $tab->module = $this->name;
+        $tab->id_parent = (int) Tab::getIdFromClassName('AdminStats');
+        foreach (Language::getLanguages(false) as $lang) {
+            $tab->name[$lang['id_lang']] = 'Attribution';
         }
+        return (bool) $tab->add();
+    }
 
-        $request = $_GET;
-        $referrer = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
-        $ownHost = parse_url(Tools::getShopDomainSsl(false), PHP_URL_HOST);
-
-        $touch = ChannelClassifier::fromRequest($request, $referrer, (string) $ownHost);
-        if ($touch === null) {
-            return; // Direct/internal navigation: keep existing attribution as is.
+    private function uninstallTab(): bool
+    {
+        $id = (int) Tab::getIdFromClassName(self::TAB_CLASS);
+        if (!$id) {
+            return true;
         }
-
-        $touch['landing_page'] = substr((string) ($_SERVER['REQUEST_URI'] ?? ''), 0, 500);
-        $touch['ts'] = time();
-
-        $this->storeTouchpoint($touch);
+        return (bool) (new Tab($id))->delete();
     }
 
     /**
-     * Links the attribution captured during the session to the new order.
+     * Runs on every front-office page. Starts a new visit when there is none
+     * (or the last one timed out) and records campaign touchpoints.
+     */
+    public function hookDisplayHeader($params)
+    {
+        if ($this->isBot()) {
+            return;
+        }
+
+        $cookie = Context::getContext()->cookie;
+        $referrer = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
+        $ownHost = (string) parse_url(Tools::getShopDomainSsl(false), PHP_URL_HOST);
+        $now = time();
+
+        $touch = ChannelClassifier::fromRequest($_GET, $referrer, $ownHost);
+        if ($touch !== null) {
+            $touch['landing_page'] = substr((string) ($_SERVER['REQUEST_URI'] ?? ''), 0, 500);
+            $touch['ts'] = $now;
+        }
+
+        $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
+        $seen = (int) ($cookie->{self::COOKIE_SESSION_SEEN} ?? 0);
+        if ($sid === '' || ($now - $seen) > self::SESSION_TIMEOUT) {
+            $sid = bin2hex(random_bytes(16));
+            $this->createSession($sid, $touch, $referrer);
+        }
+
+        $cookie->{self::COOKIE_SESSION} = $sid;
+        $cookie->{self::COOKIE_SESSION_SEEN} = $now;
+
+        if ($touch !== null) {
+            $this->storeTouchpoint($touch);
+        }
+
+        $cookie->write();
+    }
+
+    /**
+     * Links the visit and its attribution to the new order.
      */
     public function hookActionValidateOrder($params)
     {
@@ -92,6 +134,8 @@ class Attribution extends Module
             return;
         }
 
+        $cookie = Context::getContext()->cookie;
+        $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
         $touchpoints = $this->readTouchpoints();
         $first = $touchpoints[0] ?? null;
         $last = $touchpoints ? end($touchpoints) : null;
@@ -99,6 +143,7 @@ class Attribution extends Module
         Db::getInstance()->insert('attribution_order', [
             'id_order' => (int) $order->id,
             'id_customer' => (int) $order->id_customer,
+            'id_session' => pSQL($sid),
             'first_channel' => pSQL($first['channel'] ?? 'direct'),
             'first_source' => pSQL($first['source'] ?? ''),
             'first_medium' => pSQL($first['medium'] ?? ''),
@@ -111,6 +156,30 @@ class Attribution extends Module
             'total_price' => (float) $order->total_paid_tax_incl,
             'date_add' => date('Y-m-d H:i:s'),
         ], false, true, Db::REPLACE);
+
+        if ($sid !== '') {
+            // Only the first order of a visit is linked to that visit.
+            Db::getInstance()->update(
+                'attribution_session',
+                ['id_order' => (int) $order->id],
+                'id_session = "' . pSQL($sid) . '" AND id_order = 0'
+            );
+        }
+    }
+
+    private function createSession(string $sid, ?array $touch, string $referrer): void
+    {
+        Db::getInstance()->insert('attribution_session', [
+            'id_session' => pSQL($sid),
+            'channel' => pSQL($touch['channel'] ?? 'direct'),
+            'source' => pSQL($touch['source'] ?? ''),
+            'medium' => pSQL($touch['medium'] ?? ''),
+            'campaign' => pSQL($touch['campaign'] ?? ''),
+            'referrer' => pSQL($touch['referrer'] ?? ''),
+            'landing_page' => pSQL(substr((string) ($_SERVER['REQUEST_URI'] ?? ''), 0, 500)),
+            'id_order' => 0,
+            'date_add' => date('Y-m-d H:i:s'),
+        ], false, true, Db::INSERT_IGNORE);
     }
 
     private function storeTouchpoint(array $touch): void
@@ -127,15 +196,20 @@ class Attribution extends Module
         $list[] = $touch;
         $list = array_slice($list, -self::MAX_TOUCHPOINTS);
 
-        $cookie->{self::COOKIE_KEY} = json_encode($list);
-        $cookie->write();
+        $cookie->{self::COOKIE_TOUCH} = json_encode($list);
     }
 
     private function readTouchpoints(): array
     {
         $cookie = Context::getContext()->cookie;
-        $raw = $cookie->{self::COOKIE_KEY} ?? '';
+        $raw = $cookie->{self::COOKIE_TOUCH} ?? '';
         $list = $raw ? json_decode($raw, true) : [];
         return is_array($list) ? $list : [];
+    }
+
+    private function isBot(): bool
+    {
+        $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        return $ua === '' || (bool) preg_match('/bot|crawl|spider|slurp|preview|headless|monitor/i', $ua);
     }
 }
