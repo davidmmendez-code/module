@@ -28,6 +28,7 @@ class Order
     public $id_customer = 7;
     public $total_paid_tax_incl = 50.0;
     public $conversion_rate = 1.0;
+    public $id_cart = 0;
 }
 
 class Tools
@@ -47,6 +48,7 @@ class Db
 
     public static $fail = false;
     public static $calls = 0;
+    public static $log = [];
     private static $instance;
 
     public static function getInstance()
@@ -54,20 +56,21 @@ class Db
         return self::$instance ??= new self();
     }
 
-    private function hit()
+    private function hit($what = '')
     {
         self::$calls++;
+        self::$log[] = $what;
         if (self::$fail) {
             throw new RuntimeException('Database unavailable (simulated)');
         }
     }
 
-    public function insert($t, $d, $n = false, $c = true, $type = 0, $p = true) { $this->hit(); return true; }
-    public function update($t, $d, $w = '', $l = 0, $n = false, $c = false) { $this->hit(); return true; }
-    public function execute($q) { $this->hit(); return true; }
-    public function getValue($q) { $this->hit(); return 0; }
-    public function getRow($q) { $this->hit(); return []; }
-    public function executeS($q) { $this->hit(); return []; }
+    public function insert($t, $d, $n = false, $c = true, $type = 0, $p = true) { $this->hit($t); return true; }
+    public function update($t, $d, $w = '', $l = 0, $n = false, $c = false) { $this->hit($t); return true; }
+    public function execute($q) { $this->hit($q); return true; }
+    public function getValue($q) { $this->hit($q); return false; }
+    public function getRow($q) { $this->hit($q); return []; }
+    public function executeS($q) { $this->hit($q); return []; }
 }
 
 class FakeCookie
@@ -83,6 +86,7 @@ class Context
 {
     public $cookie;
     public $controller = 'index';
+    public $cart = null;
     private static $instance;
     public static function getContext() { return self::$instance ??= new self(); }
 }
@@ -157,6 +161,22 @@ $check('order, DB down: no exception reaches checkout', $run(fn() => $module->ho
 // 7. Order hook called without an order object: ignored quietly.
 Db::$fail = false;
 $check('missing order object: no exception', $run(fn() => $module->hookActionValidateOrder([])));
+
+// 8. Visit with a cart: the cart is linked to the visit.
+Db::$fail = false; Db::$calls = 0; Db::$log = [];
+$visit(['utm_source' => 'google', 'utm_medium' => 'cpc']);
+Context::getContext()->cart = (object) ['id' => 55];
+$module->hookDisplayHeader([]);
+$check('visit with cart: cart linked to visit', in_array('attribution_cart', Db::$log, true));
+
+// 9. Order without cookie (gateway callback): found through the cart link.
+Db::$fail = false; Db::$calls = 0; Db::$log = [];
+Context::getContext()->cookie = new FakeCookie();
+$order = new Order();
+$order->id_cart = 55;
+$check('order without cookie, DB up: no exception', $run(fn() => $module->hookActionValidateOrder(['order' => $order, 'cart' => (object) ['id' => 55]])));
+$check('order without cookie: cart lookup performed', (bool) array_filter(Db::$log, fn($q) => is_string($q) && str_contains($q, 'attribution_cart')));
+Context::getContext()->cart = null;
 
 echo $failures === 0 ? "\nAll tests passed.\n" : "\n$failures test(s) failed.\n";
 exit($failures === 0 ? 0 : 1);

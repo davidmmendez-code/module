@@ -18,6 +18,7 @@ class Attribution extends Module
     const COOKIE_TOUCH = 'attr_touch';
     const COOKIE_SESSION = 'attr_sid';
     const COOKIE_SESSION_SEEN = 'attr_sid_seen';
+    const COOKIE_CART = 'attr_cart';
     const SESSION_TIMEOUT = 1800; // 30 min of inactivity starts a new visit
     const MAX_TOUCHPOINTS = 5; // cookie budget: browsers drop cookies over ~4 KB
     const TAB_CLASS = 'AdminAttribution';
@@ -26,7 +27,7 @@ class Attribution extends Module
     {
         $this->name = 'attribution';
         $this->tab = 'analytics_stats';
-        $this->version = '0.2.2';
+        $this->version = '0.2.3';
         $this->author = 'TBD';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '8.99.99'];
@@ -174,10 +175,20 @@ class Attribution extends Module
             $this->createSession($sid, $touch, $referrer);
         }
 
+        // Link the current cart to this visit, so the order can be matched even without the cookie.
+        $cartId = $this->currentCartId();
+        $cartChanged = $cartId > 0 && $cartId !== (int) ($cookie->{self::COOKIE_CART} ?? 0);
+        if ($cartId > 0 && ($newSession || $cartChanged)) {
+            $this->linkCart($cartId, $sid);
+        }
+
         // Write the cookie only when something changed, refreshing the activity time at most once a minute.
-        if ($newSession || $touch !== null || ($now - $seen) >= 60) {
+        if ($newSession || $touch !== null || $cartChanged || ($now - $seen) >= 60) {
             $cookie->{self::COOKIE_SESSION} = $sid;
             $cookie->{self::COOKIE_SESSION_SEEN} = $now;
+            if ($cartId > 0) {
+                $cookie->{self::COOKIE_CART} = $cartId;
+            }
 
             if ($touch !== null) {
                 $this->storeTouchpoint($touch);
@@ -199,17 +210,26 @@ class Attribution extends Module
 
         // Attribution must never block or break the order creation.
         try {
-            $this->linkOrder($order);
+            // PrestaShop passes the cart; payment callbacks and back-office orders carry no cookie.
+            $cartId = (int) (($params['cart']->id ?? null) ?: ($order->id_cart ?? 0));
+            $this->linkOrder($order, $cartId);
         } catch (Throwable $e) {
             error_log('Attribution actionValidateOrder: ' . $e->getMessage());
         }
     }
 
-    private function linkOrder(Order $order): void
+    private function linkOrder(Order $order, int $cartId): void
     {
         $cookie = Context::getContext()->cookie;
-        $sid = (string) ($cookie->{self::COOKIE_SESSION} ?? '');
+        $sid = $cookie ? (string) ($cookie->{self::COOKIE_SESSION} ?? '') : '';
+        if ($sid === '' && $cartId > 0) {
+            // No cookie (gateway callback, back-office order): use the visit that was linked to the cart.
+            $sid = $this->sessionForCart($cartId);
+        }
         $touchpoints = $this->readTouchpoints();
+        if (!$touchpoints && $sid !== '') {
+            $touchpoints = $this->touchpointFromSession($sid);
+        }
         $first = $touchpoints[0] ?? null;
         $last = $touchpoints ? end($touchpoints) : null;
 
@@ -238,6 +258,38 @@ class Attribution extends Module
                 'id_session = "' . pSQL($sid) . '" AND id_order = 0'
             );
         }
+    }
+
+    private function currentCartId(): int
+    {
+        $cart = Context::getContext()->cart ?? null;
+        return $cart && !empty($cart->id) ? (int) $cart->id : 0;
+    }
+
+    /** Remembers which visit a cart belongs to. The latest visit wins. */
+    private function linkCart(int $cartId, string $sid): void
+    {
+        Db::getInstance()->insert('attribution_cart', [
+            'id_cart' => $cartId,
+            'id_session' => pSQL($sid),
+            'date_add' => date('Y-m-d H:i:s'),
+        ], false, true, Db::REPLACE);
+    }
+
+    private function sessionForCart(int $cartId): string
+    {
+        return (string) Db::getInstance()->getValue(
+            'SELECT id_session FROM ' . _DB_PREFIX_ . 'attribution_cart WHERE id_cart = ' . (int) $cartId
+        );
+    }
+
+    /** One touchpoint built from the visit row, used when the cookie history is missing. */
+    private function touchpointFromSession(string $sid): array
+    {
+        $row = Db::getInstance()->getRow(
+            'SELECT channel, source, medium, campaign FROM ' . _DB_PREFIX_ . 'attribution_session WHERE id_session = "' . pSQL($sid) . '"'
+        );
+        return $row ? [$row] : [];
     }
 
     /** Revenue in the shop's default currency (Order::conversion_rate is relative to it). */
@@ -284,6 +336,9 @@ class Attribution extends Module
     private function readTouchpoints(): array
     {
         $cookie = Context::getContext()->cookie;
+        if (!$cookie) {
+            return [];
+        }
         $raw = $cookie->{self::COOKIE_TOUCH} ?? '';
         $list = $raw ? json_decode($raw, true) : [];
         return is_array($list) ? $list : [];

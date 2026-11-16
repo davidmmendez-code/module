@@ -38,4 +38,13 @@ return [
         KEY `idx_last_channel` (`last_channel`),
         KEY `idx_date_add` (`date_add`)
     ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4',
+
+    // Which visit a cart belongs to, so orders can be matched when the cookie is missing.
+    'CREATE TABLE IF NOT EXISTS `PREFIX_attribution_cart` (
+        `id_cart` INT UNSIGNED NOT NULL,
+        `id_session` VARCHAR(64) NOT NULL DEFAULT \'\',
+        `date_add` DATETIME NOT NULL,
+        PRIMARY KEY (`id_cart`),
+        KEY `idx_session` (`id_session`)
+    ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8mb4',
 ];
