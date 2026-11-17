@@ -1,0 +1,75 @@
+# Entorno de staging para pruebas de seguridad.
+# SOLO datos de prueba. Las contraseñas son de laboratorio: no reutilizar nunca en producción.
+#
+#   PrestaShop 1.7.8.11  -> http://localhost:8017   admin: http://localhost:8017/admin_ps17
+#   PrestaShop 8.2.9     -> http://localhost:8080   admin: http://localhost:8080/admin_ps8
+#
+# Uso:  docker compose up -d        (primera vez: ~5-10 min de instalación automática)
+#       docker compose down -v      (borra todo, incluidas las bases de datos)
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: staging-root-only
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  ps17:
+    image: prestashop/prestashop:1.7.8.11-7.4-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8017:80"
+    environment:
+      DB_SERVER: db
+      DB_NAME: ps17
+      DB_USER: root
+      DB_PASSWD: staging-root-only
+      PS_DOMAIN: localhost:8017
+      PS_INSTALL_AUTO: 1
+      PS_LANGUAGE: es
+      PS_COUNTRY: ES
+      PS_FOLDER_ADMIN: admin_ps17
+      PS_FOLDER_INSTALL: install_ps17
+      PS_DEV_MODE: 1
+      ADMIN_MAIL: admin@staging.local
+      ADMIN_PASSWD: staging-admin-pass
+    volumes:
+      - ps17-data:/var/www/html
+
+  ps8:
+    image: prestashop/prestashop:8.2.9-8.1-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      DB_SERVER: db
+      DB_NAME: ps8
+      DB_USER: root
+      DB_PASSWD: staging-root-only
+      PS_DOMAIN: localhost:8080
+      PS_INSTALL_AUTO: 1
+      PS_LANGUAGE: en
+      PS_COUNTRY: ES
+      PS_FOLDER_ADMIN: admin_ps8
+      PS_FOLDER_INSTALL: install_ps8
+      PS_DEV_MODE: 1
+      ADMIN_MAIL: admin@staging.local
+      ADMIN_PASSWD: staging-admin-pass
+    volumes:
+      - ps8-data:/var/www/html
+
+volumes:
+  db-data:
+  ps17-data:
+  ps8-data:
