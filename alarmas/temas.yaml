@@ -1,0 +1,46 @@
+# Temáticas y búsquedas. Añade o quita bloques libremente.
+#
+# Fuentes:
+#   google_news -> consulta: texto de búsqueda (sintaxis de Google: "frase exacta", OR, paréntesis)
+#   rss         -> url: cualquier feed RSS (webs de subastas, boletines, blogs...)
+#
+# Campos opcionales por búsqueda:
+#   frecuencia: 6h | 1d | 1w        (si se omite, se usa la de la temática)
+#   incluir:  [palabras]            (basta que aparezca una)
+#   excluir:  [palabras]            (no puede aparecer ninguna)
+#   prioridad: alta | media | baja  (alta = además sale por consola)
+#   antiguedad_max_dias: 30         (descarta noticias más viejas)
+#   activa: false                   (pausar sin borrar)
+
+temas:
+  - nombre: Subastas
+    frecuencia: 1w
+    busquedas:
+      - nombre: Inmuebles en subasta Madrid
+        fuente: google_news
+        consulta: '"subasta" (piso OR vivienda OR inmueble) Madrid (judicial OR notarial OR BOE)'
+        incluir: [subasta]
+        excluir: [coche, vehículo]
+        prioridad: alta
+        antiguedad_max_dias: 60
+
+      - nombre: Vehículos en subasta
+        fuente: google_news
+        consulta: '"subasta" (coche OR vehículo OR turismo) (judicial OR BOE OR pública)'
+        incluir: [subasta]
+        prioridad: media
+        antiguedad_max_dias: 60
+
+      - nombre: Feed de subastas BOE (pendiente de URL)
+        fuente: rss
+        url: "https://example.com/rss-pendiente"   # sustituir por el RSS real
+        activa: false
+
+  - nombre: Interés
+    frecuencia: 1d
+    busquedas:
+      - nombre: Inteligencia artificial en España
+        fuente: google_news
+        consulta: '"inteligencia artificial" España'
+        prioridad: media
+        antiguedad_max_dias: 2
