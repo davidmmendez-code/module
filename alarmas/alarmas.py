@@ -17,6 +17,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from html import escape as esc_html
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -55,12 +56,27 @@ def descargar(url):
         return respuesta.read()
 
 
+def _imagen_rss(item, descripcion_bruta):
+    """Busca la imagen de un item: media:content, media:thumbnail, enclosure o <img> del resumen."""
+    for etiqueta in ("{http://search.yahoo.com/mrss/}content", "{http://search.yahoo.com/mrss/}thumbnail"):
+        elemento = item.find(etiqueta)
+        if elemento is not None and elemento.get("url"):
+            return elemento.get("url")
+    enlace = item.find("enclosure")
+    if enlace is not None and (enlace.get("type") or "").startswith("image/"):
+        return enlace.get("url")
+    coincidencia = re.search(r'<img[^>]+src="([^"]+)"', descripcion_bruta)
+    return coincidencia.group(1) if coincidencia else None
+
+
 def leer_rss(contenido):
     """Extrae los items de un feed RSS 2.0 (también sirve el de Google News)."""
     raiz = ET.fromstring(contenido)
     items = []
     for item in raiz.iter("item"):
-        resumen = re.sub(r"<[^>]+>", " ", item.findtext("description") or "")
+        bruto = item.findtext("description") or ""
+        resumen = re.sub(r"<[^>]+>", " ", bruto)
+        imagen = _imagen_rss(item, bruto)
         publicado = None
         fecha = item.findtext("pubDate")
         if fecha:
@@ -76,6 +92,7 @@ def leer_rss(contenido):
             "resumen": " ".join(resumen.split()),
             "fuente": (item.findtext("source") or "").strip(),
             "publicado": publicado,
+            "imagen": imagen,
         })
     return items
 
@@ -83,23 +100,28 @@ def leer_rss(contenido):
 class _Enlaces(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.enlaces = []
-        self._href = None
-        self._texto = []
+        self.enlaces = []  # tuplas (href, texto, imagen)
+        self._ancla = None  # datos del <a> en el que estamos
 
     def handle_starttag(self, tag, attrs):
+        datos = dict(attrs)
         if tag == "a":
-            self._href = dict(attrs).get("href")
-            self._texto = []
+            self._ancla = {"href": datos.get("href"), "title": datos.get("title") or "",
+                           "imagen": None, "alt": "", "texto": []}
+        elif tag == "img" and self._ancla is not None and self._ancla["imagen"] is None:
+            self._ancla["imagen"] = datos.get("src")
+            self._ancla["alt"] = datos.get("alt") or ""
 
     def handle_data(self, data):
-        if self._href is not None:
-            self._texto.append(data)
+        if self._ancla is not None:
+            self._ancla["texto"].append(data)
 
     def handle_endtag(self, tag):
-        if tag == "a" and self._href is not None:
-            self.enlaces.append((self._href, " ".join("".join(self._texto).split())))
-            self._href = None
+        if tag == "a" and self._ancla is not None:
+            ancla = self._ancla
+            texto = " ".join("".join(ancla["texto"]).split()) or ancla["alt"] or ancla["title"]
+            self.enlaces.append((ancla["href"], texto, ancla["imagen"]))
+            self._ancla = None
 
 
 def leer_enlaces(contenido, base):
@@ -108,14 +130,21 @@ def leer_enlaces(contenido, base):
     parser.feed(contenido.decode("utf-8", errors="replace"))
     items, vistos = [], set()
     dominio = urllib.parse.urlparse(base).netloc
-    for href, texto in parser.enlaces:
-        if len(texto) < 15:  # descarta menús y enlaces sueltos
+    for href, texto, imagen in parser.enlaces:
+        if not href or len(texto) < 15:  # descarta menús y enlaces sueltos
             continue
         absoluta = urllib.parse.urljoin(base, href)
         if not absoluta.startswith(("http://", "https://")) or absoluta in vistos:
             continue
         vistos.add(absoluta)
-        items.append({"titulo": texto, "enlace": absoluta, "resumen": "", "fuente": dominio, "publicado": None})
+        items.append({
+            "titulo": texto,
+            "enlace": absoluta,
+            "resumen": "",
+            "fuente": dominio,
+            "publicado": None,
+            "imagen": urllib.parse.urljoin(base, imagen) if imagen else None,
+        })
     return items
 
 
@@ -236,6 +265,73 @@ def escribir_resumen(carpeta, ahora, resultados):
     return ruta
 
 
+ESTILO = """
+:root{--bg:#f6f6f4;--card:#fff;--txt:#1d1d1b;--mut:#6b6b66;--ac:#1a56db}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141414;--card:#1f1f1e;--txt:#eee;--mut:#9a9a94;--ac:#7aa7ff}}
+:root[data-theme="dark"]{--bg:#141414;--card:#1f1f1e;--txt:#eee;--mut:#9a9a94;--ac:#7aa7ff}
+body{margin:0;padding:16px;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,sans-serif}
+h1{font-size:1.4rem}
+h2{margin-top:32px;border-bottom:1px solid #8884;padding-bottom:4px}
+h3 small{color:var(--mut);font-weight:normal}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.tarjeta{background:var(--card);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.tarjeta img{width:100%;height:170px;object-fit:cover;background:#8882}
+.sin-imagen{height:170px;display:flex;align-items:center;justify-content:center;color:var(--mut);background:#8881}
+.cuerpo{padding:12px}
+.cuerpo h3{font-size:1rem;margin:4px 0 8px}
+.cuerpo a{color:var(--ac);text-decoration:none}
+.cuerpo p{margin:0 0 6px}
+.meta{color:var(--mut);font-size:.8rem}
+.badge{font-size:.7rem;border-radius:4px;padding:1px 6px;background:#8883}
+.badge.alta{background:#e0484844}
+"""
+
+
+def _tarjeta(item):
+    imagen = item.get("imagen")
+    if imagen and imagen.startswith(("http://", "https://")):
+        media = f'<img src="{esc_html(imagen, quote=True)}" alt="" loading="lazy">'
+    else:
+        media = '<div class="sin-imagen">Sin imagen</div>'
+    fecha = item["publicado"].strftime("%Y-%m-%d") if item["publicado"] else "sin fecha"
+    return (
+        '<article class="tarjeta">'
+        f'{media}'
+        '<div class="cuerpo">'
+        f'<p class="meta">{esc_html(item["fuente"])} · {esc_html(fecha)}</p>'
+        f'<h3><a href="{esc_html(item["enlace"], quote=True)}" target="_blank" rel="noopener">'
+        f'{esc_html(item["titulo"])}</a></h3>'
+        f'<p>{esc_html(item["resumen"][:400])}</p>'
+        '</div></article>'
+    )
+
+
+def escribir_html(carpeta, ahora, resultados):
+    """Página con tarjetas (foto, título, fuente, fecha, resumen) de las novedades de esta ejecución."""
+    carpeta.mkdir(parents=True, exist_ok=True)
+    ruta = carpeta / f"{ahora:%Y-%m-%d_%H%M}.html"
+    secciones = []
+    for tema, bloques in resultados.items():
+        secciones.append(f"<h2>{esc_html(tema)}</h2>")
+        for busqueda, items in bloques:
+            prioridad = busqueda.get("prioridad", "media")
+            secciones.append(
+                f'<h3>{esc_html(busqueda["nombre"])} '
+                f'<span class="badge {esc_html(prioridad)}">{esc_html(prioridad)}</span> '
+                f'<small>{len(items)} nuevos</small></h3>'
+            )
+            secciones.append('<div class="rejilla">' + "".join(_tarjeta(i) for i in items) + "</div>")
+    titulo = f"Alarmas {ahora:%Y-%m-%d %H:%M} UTC"
+    documento = (
+        '<!doctype html><html lang="es"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        f"<title>{esc_html(titulo)}</title><style>{ESTILO}</style></head>"
+        f"<body><h1>{esc_html(titulo)}</h1>{''.join(secciones)}</body></html>"
+    )
+    ruta.write_text(documento, encoding="utf-8")
+    return ruta
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Alarmas de búsqueda por temáticas")
     parser.add_argument("--config", type=Path, default=CONFIG_POR_DEFECTO)
@@ -268,11 +364,13 @@ def main(argv=None):
         return 0
 
     ruta = escribir_resumen(SALIDA_POR_DEFECTO, ahora, resultados)
+    ruta_html = escribir_html(SALIDA_POR_DEFECTO, ahora, resultados)
     for tema, nombre, items in prioritarios:
         print(f"!! [{tema} / {nombre}] {len(items)} nuevos:")
         for item in items:
             print(f"   - {item['titulo']}\n     {item['enlace']}")
     print(f"{total} novedades guardadas en {ruta}")
+    print(f"Vista con fotos: {ruta_html}")
     return 0
 
 
