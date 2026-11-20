@@ -54,6 +54,8 @@ temas:
         antiguedad_max_dias: 60
         fuentes:
           - fuente: web
+            url: "https://www.viasubasta.com/subastas"  # verificar: no accesible desde el sandbox
+          - fuente: web
             url: "https://www.escrapalia.com/"       # verificar
           - fuente: web
             url: "https://www.diariodesubastas.com/" # verificar
