@@ -17,6 +17,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from html.parser import HTMLParser
 from pathlib import Path
 
 import yaml
@@ -79,6 +80,45 @@ def leer_rss(contenido):
     return items
 
 
+class _Enlaces(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.enlaces = []
+        self._href = None
+        self._texto = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self._href = dict(attrs).get("href")
+            self._texto = []
+
+    def handle_data(self, data):
+        if self._href is not None:
+            self._texto.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self._href is not None:
+            self.enlaces.append((self._href, " ".join("".join(self._texto).split())))
+            self._href = None
+
+
+def leer_enlaces(contenido, base):
+    """Extrae los enlaces de una página de listados. Cada enlace con texto suficiente es un item."""
+    parser = _Enlaces()
+    parser.feed(contenido.decode("utf-8", errors="replace"))
+    items, vistos = [], set()
+    dominio = urllib.parse.urlparse(base).netloc
+    for href, texto in parser.enlaces:
+        if len(texto) < 15:  # descarta menús y enlaces sueltos
+            continue
+        absoluta = urllib.parse.urljoin(base, href)
+        if not absoluta.startswith(("http://", "https://")) or absoluta in vistos:
+            continue
+        vistos.add(absoluta)
+        items.append({"titulo": texto, "enlace": absoluta, "resumen": "", "fuente": dominio, "publicado": None})
+    return items
+
+
 def cumple_filtros(item, busqueda):
     """incluir: basta una palabra. excluir: ninguna palabra puede aparecer."""
     texto = normalizar(f"{item['titulo']} {item['resumen']}")
@@ -124,6 +164,17 @@ def toca_ejecutar(con, identificador, frecuencia, ahora, forzar):
     return ahora - datetime.fromisoformat(fila[0]) >= frecuencia_a_delta(frecuencia)
 
 
+def obtener_fuente(fuente, descargar_fn):
+    """Descarga una fuente concreta (google_news, rss o web) y devuelve sus items."""
+    if fuente["fuente"] == "google_news":
+        return leer_rss(descargar_fn(url_google_news(fuente["consulta"])))
+    if fuente["fuente"] == "rss":
+        return leer_rss(descargar_fn(fuente["url"]))
+    if fuente["fuente"] == "web":
+        return leer_enlaces(descargar_fn(fuente["url"]), fuente["url"])
+    raise ValueError(f"Fuente desconocida: {fuente['fuente']}")
+
+
 def ejecutar_busqueda(con, tema, busqueda, ahora, forzar=False, descargar_fn=descargar):
     """Devuelve los items nuevos, [] si no toca o nada nuevo, o None si hubo error de red."""
     identificador = f"{tema['nombre']}/{busqueda['nombre']}"
@@ -131,18 +182,16 @@ def ejecutar_busqueda(con, tema, busqueda, ahora, forzar=False, descargar_fn=des
     if not toca_ejecutar(con, identificador, frecuencia, ahora, forzar):
         return []
 
-    if busqueda["fuente"] == "google_news":
-        url = url_google_news(busqueda["consulta"])
-    elif busqueda["fuente"] == "rss":
-        url = busqueda["url"]
-    else:
-        raise ValueError(f"Fuente desconocida en '{identificador}': {busqueda['fuente']}")
-
-    try:
-        items = leer_rss(descargar_fn(url))
-    except Exception as error:  # red caída, feed roto...
-        print(f"[error] {identificador}: {error}", file=sys.stderr)
-        return None
+    # Una búsqueda puede tener varias fuentes en 'fuentes:'; si no, la propia búsqueda es la única fuente.
+    items, errores = [], 0
+    for fuente in busqueda.get("fuentes", [busqueda]):
+        try:
+            items += obtener_fuente(fuente, descargar_fn)
+        except Exception as error:  # red caída, feed roto, página cambiada...
+            errores += 1
+            print(f"[error] {identificador} ({fuente['fuente']}): {error}", file=sys.stderr)
+    if errores and not items:
+        return None  # nada se descargó: no se marca como ejecutada y se reintenta luego
 
     nuevos = []
     max_dias = busqueda.get("antiguedad_max_dias")

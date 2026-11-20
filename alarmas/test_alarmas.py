@@ -122,12 +122,79 @@ class EjecucionTest(unittest.TestCase):
         )
 
 
+WEB = """<html><body>
+<nav><a href="/inicio">Inicio</a></nav>
+<a href="/subasta/123">Piso embargado en Getafe, subasta judicial 2026</a>
+<a href="https://otro.es/lote/9">Vehículo turismo subastado por la AEAT</a>
+<a href="/subasta/123">Piso embargado en Getafe, subasta judicial 2026</a>
+<a href="mailto:x@y.es">Escríbenos para cualquier duda sobre subastas</a>
+</body></html>""".encode("utf-8")
+
+
+class WebTest(unittest.TestCase):
+    def test_extrae_enlaces_absolutos_sin_duplicados_ni_menus(self):
+        items = alarmas.leer_enlaces(WEB, "https://portal.es/listado")
+        self.assertEqual([i["enlace"] for i in items],
+                         ["https://portal.es/subasta/123", "https://otro.es/lote/9"])
+        self.assertEqual(items[0]["fuente"], "portal.es")
+
+    def test_ejecucion_web_avisa_solo_de_nuevos(self):
+        con = base_en_memoria()
+        busqueda = {"nombre": "Portal", "fuente": "web", "url": "https://portal.es/listado",
+                    "incluir": ["subasta", "vehículo", "piso"]}
+        primera = alarmas.ejecutar_busqueda(con, TEMA, busqueda, AHORA, descargar_fn=lambda u: WEB)
+        self.assertEqual(len(primera), 2)
+        segunda = alarmas.ejecutar_busqueda(con, TEMA, busqueda, AHORA + timedelta(days=1),
+                                            descargar_fn=lambda u: WEB)
+        self.assertEqual(segunda, [])
+
+
+class MultiFuenteTest(unittest.TestCase):
+    def test_una_fuente_caida_no_bloquea_a_las_demas(self):
+        con = base_en_memoria()
+        busqueda = {
+            "nombre": "Mixta",
+            "incluir": ["subasta"],
+            "excluir": ["coche"],
+            "antiguedad_max_dias": 60,
+            "fuentes": [
+                {"fuente": "web", "url": "https://caida.es/listado"},
+                {"fuente": "rss", "url": "https://ok.es/feed"},
+            ],
+        }
+
+        def descargar(url):
+            if "caida" in url:
+                raise OSError("sin red")
+            return FEED
+
+        nuevos = alarmas.ejecutar_busqueda(con, TEMA, busqueda, AHORA, descargar_fn=descargar)
+        self.assertEqual([i["titulo"] for i in nuevos], ["Subasta de piso en Madrid - Juzgado 3"])
+
+    def test_todas_caidas_no_marca_como_ejecutada(self):
+        con = base_en_memoria()
+        busqueda = {"nombre": "Mixta", "fuentes": [{"fuente": "rss", "url": "https://a.es"},
+                                                   {"fuente": "web", "url": "https://b.es"}]}
+
+        def fallo(url):
+            raise OSError("sin red")
+
+        self.assertIsNone(alarmas.ejecutar_busqueda(con, TEMA, busqueda, AHORA, descargar_fn=fallo))
+
+
 class ConfigTest(unittest.TestCase):
     def test_config_de_ejemplo_es_valida(self):
         config = yaml.safe_load(Path(alarmas.AQUI / "temas.yaml").read_text(encoding="utf-8"))
         for tema in config["temas"]:
             for busqueda in tema["busquedas"]:
-                self.assertIn(busqueda["fuente"], {"google_news", "rss"})
+                fuentes = busqueda.get("fuentes", [busqueda])
+                self.assertTrue(fuentes, busqueda["nombre"])
+                for fuente in fuentes:
+                    self.assertIn(fuente["fuente"], {"google_news", "rss", "web"}, busqueda["nombre"])
+                    if fuente["fuente"] in {"rss", "web"}:
+                        self.assertTrue(fuente["url"].startswith("https://"), busqueda["nombre"])
+                    if fuente["fuente"] == "google_news":
+                        self.assertTrue(fuente["consulta"], busqueda["nombre"])
                 if "frecuencia" in busqueda:
                     alarmas.frecuencia_a_delta(busqueda["frecuencia"])
                 if "frecuencia" in tema:
