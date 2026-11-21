@@ -60,5 +60,8 @@ $check('subdomain of own .co.uk shop => null', null, $t);
 $t = AttributionChannelClassifier::fromRequest(['utm_source' => 'GOOGLE', 'utm_medium' => 'CPC'], '', $own);
 $check('utm is case-insensitive', 'google_ads', $t['channel']);
 
+$t = AttributionChannelClassifier::fromRequest([], 'https://blog.ejemplo.com/post/12?x=1#top', $own);
+$check('referrer keeps the path, drops the query', 'blog.ejemplo.com/post/12', $t['referrer']);
+
 echo $failures === 0 ? "\nAll tests passed.\n" : "\n$failures test(s) failed.\n";
 exit($failures === 0 ? 0 : 1);

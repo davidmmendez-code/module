@@ -27,7 +27,7 @@ class Attribution extends Module
     {
         $this->name = 'attribution';
         $this->tab = 'analytics_stats';
-        $this->version = '0.2.4';
+        $this->version = '0.2.5';
         $this->author = 'TBD';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '8.99.99'];

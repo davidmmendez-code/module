@@ -109,13 +109,24 @@ class AttributionChannelClassifier
             'source' => substr($source, 0, 255),
             'medium' => substr($medium, 0, 255),
             'campaign' => substr($campaign, 0, 255),
-            'referrer' => substr(self::host($referrer), 0, 255),
+            'referrer' => substr(self::hostAndPath($referrer), 0, 255),
         ];
     }
 
     private static function clean(string $value): string
     {
         return strtolower(trim($value));
+    }
+
+    /** "https://blog.site.com/post?x=1" -> "blog.site.com/post" (query and fragment dropped) */
+    private static function hostAndPath(string $url): string
+    {
+        $host = self::host($url);
+        if ($host === '') {
+            return '';
+        }
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        return rtrim($host . $path, '/');
     }
 
     private static function host(string $url): string
