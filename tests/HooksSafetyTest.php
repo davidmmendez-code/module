@@ -35,7 +35,7 @@ class Tools
 {
     public static function getValue($k, $d = null) { return $_GET[$k] ?? $d; }
     public static function isSubmit($k) { return isset($_POST[$k]); }
-    public static function getShopDomainSsl($ssl = false) { return 'https://shop.test'; }
+    public static function getShopDomainSsl($ssl = false) { return 'shop.test'; } // bare host, as PrestaShop returns it
 }
 
 function pSQL($s, $htmlOK = false) { return addslashes((string) $s); }
@@ -177,6 +177,12 @@ $order->id_cart = 55;
 $check('order without cookie, DB up: no exception', $run(fn() => $module->hookActionValidateOrder(['order' => $order, 'cart' => (object) ['id' => 55]])));
 $check('order without cookie: cart lookup performed', (bool) array_filter(Db::$log, fn($q) => is_string($q) && str_contains($q, 'attribution_cart')));
 Context::getContext()->cart = null;
+
+// 10. Visit from the shop's own pages: not a referral and no touchpoint stored.
+Db::$fail = false;
+$visit([], 'https://www.shop.test/categoria');
+$module->hookDisplayHeader([]);
+$check('own-domain referrer: no referral touchpoint', !isset(Context::getContext()->cookie->vars['attr_touch']));
 
 echo $failures === 0 ? "\nAll tests passed.\n" : "\n$failures test(s) failed.\n";
 exit($failures === 0 ? 0 : 1);

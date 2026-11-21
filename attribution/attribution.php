@@ -27,7 +27,7 @@ class Attribution extends Module
     {
         $this->name = 'attribution';
         $this->tab = 'analytics_stats';
-        $this->version = '0.2.3';
+        $this->version = '0.2.4';
         $this->author = 'TBD';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '8.99.99'];
@@ -162,7 +162,9 @@ class Attribution extends Module
             return;
         }
         $referrer = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
-        $ownHost = (string) parse_url(Tools::getShopDomainSsl(false), PHP_URL_HOST);
+        // getShopDomainSsl(false) returns a bare host (no scheme), so parse_url() alone would return null.
+        $shopDomain = (string) Tools::getShopDomainSsl(false);
+        $ownHost = (string) (parse_url($shopDomain, PHP_URL_HOST) ?: $shopDomain);
         $now = time();
 
         $touch = AttributionChannelClassifier::fromRequest($_GET, $referrer, $ownHost);
