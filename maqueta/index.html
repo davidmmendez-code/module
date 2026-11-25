@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta home - Tienda Estética Pro</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;font-family:Montserrat,system-ui,sans-serif;color:#2b2b2b;background:#fff}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px;box-sizing:border-box;width:100%}
+.cat{width:200px;height:200px;border-radius:50%;background:#f3f1ea;display:flex;align-items:center;justify-content:center;color:#7a7d70;font-size:12px;text-align:center;padding:16px;box-sizing:border-box}
+.card{background:#fff;border:1px solid #ececec;border-radius:12px;overflow:hidden;box-sizing:border-box}
+.promo{position:relative;border-radius:10px;overflow:hidden;height:220px;box-sizing:border-box;padding:20px;color:#fff}
+.btn{display:inline-block;background:#6f7d5b;color:#fff;border:0;border-radius:4px;padding:12px 22px;font:600 13px Montserrat,sans-serif;letter-spacing:.04em;cursor:pointer}
+.btn:disabled{background:#c9ccc0;cursor:default}
+.ph{background:#e4e1d6;display:flex;align-items:center;justify-content:center;color:#7a7d70;font-size:12px;text-align:center;padding:12px;box-sizing:border-box}
+.badge{display:inline-block;background:#6f7d5b;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:3px}
+.nav a{font-size:13px;font-weight:600;letter-spacing:.03em;color:#2b2b2b}
+.pill{border:1px solid #fff;border-radius:20px;padding:3px 12px;font-size:11px;color:#fff}
+.bento{border-radius:14px;overflow:hidden;position:relative;box-sizing:border-box}
+.trust{font-size:15px;font-weight:700;color:#5d6749}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.grid4,.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}.bento{position:relative}}
+@media (max-width:600px){.grid4,.grid3{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+
+<div style="background:#7f8b6b;color:#fff;font-size:12px">
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;height:36px;flex-wrap:wrap;gap:8px">
+    <span>Envíos gratuitos en península España, en pedidos superiores a 60€. Entrega 48-72h.</span>
+    <span style="display:flex;gap:10px;align-items:center"><span style="font-size:11px">REGÍSTRATE</span><span class="pill">PROFESIONAL</span><span class="pill">PARTICULAR</span></span>
+  </div>
+</div>
+
+<header style="background:#fff;border-bottom:1px solid #eee">
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:84px;gap:24px">
+    <div style="display:flex;align-items:center;gap:10px;min-width:180px">
+      <div style="width:44px;height:52px;background:#9aa584;border-radius:0 50% 0 50%"></div>
+      <div style="font-size:15px;font-weight:300;line-height:1.1;color:#7f8b6b">Tienda<br><b style="font-weight:600">Estética</b><br><b style="font-weight:600">Pro</b></div>
+    </div>
+    <div style="flex:1;max-width:560px;height:44px;border:1px solid #ddd;border-radius:4px;display:flex;align-items:center;padding:0 14px;box-sizing:border-box;color:#888;font-size:13px">¿Qué estás buscando?</div>
+    <div style="display:flex;gap:22px;align-items:center;font-size:13px;font-weight:600">
+      <span>Test Test</span><span>Carrito (0)</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav" style="background:#fff;border-bottom:1px solid #eee">
+  <div class="wrap" style="display:flex;justify-content:center;flex-wrap:wrap;gap:34px;height:52px;align-items:center">
+    <a>PELUQUERÍA ▾</a><a>ESTÉTICA ▾</a><a>BARBERÍA ▾</a><a>MARCAS ▾</a><a style="color:#9a9a9a">OFERTAS</a><a>APTO PARA VEGANOS</a><a>BLOG ▾</a>
+  </div>
+</nav>
+
+<section style="background:#e4dfcd;min-height:420px;position:relative;overflow:hidden;padding:40px 0;box-sizing:border-box">
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap">
+    <div style="max-width:440px;color:#1e1e1e">
+      <div style="font-size:18px;font-weight:500">Colección de maquillaje</div>
+      <div style="font-size:88px;font-weight:800;line-height:1;margin:6px 0 14px">Ice Red</div>
+      <div style="font-size:15px;line-height:1.5;margin-bottom:26px">Una colección que transforma la luz fría del invierno y la intensidad del rojo en una expresión de belleza luminosa, sofisticada y magnética.</div>
+      <button class="btn" style="background:#fff;color:#1e1e1e;padding:14px 40px">DESCÚBRELOS</button>
+    </div>
+    <div class="ph" style="width:560px;max-width:100%;height:340px;background:#d6d0bb">Imagen: producto colección Ice Red (sustituir por foto de campaña)</div>
+  </div>
+</section>
+
+<section style="padding:56px 0 24px">
+  <div class="wrap" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;justify-items:center">
+    <div style="text-align:center"><div class="cat">Imagen: Peluquería</div><div style="margin-top:14px;font-size:18px;font-weight:500">Peluquería</div></div>
+    <div style="text-align:center"><div class="cat">Imagen: Estética</div><div style="margin-top:14px;font-size:18px;font-weight:500">Estética</div></div>
+    <div style="text-align:center"><div class="cat">Imagen: Barbería</div><div style="margin-top:14px;font-size:18px;font-weight:500">Barbería</div></div>
+    <div style="text-align:center"><div class="cat">Logos marcas</div><div style="margin-top:14px;font-size:18px;font-weight:500">Marcas</div></div>
+  </div>
+</section>
+
+<section style="padding:24px 0 40px">
+  <div class="wrap">
+    <h2 style="font-size:28px;font-weight:600;margin:0 0 22px">Promociones</h2>
+    <div class="grid4">
+      <div class="promo" style="background:#8fa083"><div style="font-size:19px;font-weight:700;line-height:1.15">Gama biopure</div><div style="font-size:11px;opacity:.9">Hasta final de stock</div><div style="position:absolute;bottom:20px;left:20px;font-size:44px;font-weight:700">60%</div><span class="badge" style="position:absolute;bottom:20px;right:20px;background:#fff;color:#4d5340">Oferta limitada</span></div>
+      <div class="promo" style="background:#e9b96a;color:#2b2b2b"><div style="font-size:19px;font-weight:700;line-height:1.15">Serum hidratante</div><div style="font-size:11px;opacity:.9">Fórmula vegana</div><div style="position:absolute;bottom:20px;left:20px;font-size:40px;font-weight:700">6,95 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Nuevo</span></div>
+      <div class="promo" style="background:#c9d6b8;color:#2b2b2b"><div style="font-size:19px;font-weight:700;line-height:1.15">Gel conductor Aloe Vera 5 l</div><div style="position:absolute;bottom:20px;left:20px;font-size:40px;font-weight:700">10,95 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Oferta top</span></div>
+      <div class="promo" style="background:#2e2e2e"><div style="font-size:19px;font-weight:700;line-height:1.15">Pack de iniciación Barbero</div><div style="position:absolute;bottom:20px;left:20px;font-size:36px;font-weight:700">169,90 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Nuevo</span></div>
+      <div class="promo" style="background:#3c4a3a"><div style="font-size:19px;font-weight:700;line-height:1.15">Pack Ragnar Tech</div><div style="position:absolute;bottom:20px;left:20px;font-size:36px;font-weight:700">264,90 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Oferta limitada</span></div>
+      <div class="promo" style="background:#d9e3ea;color:#2b2b2b"><div style="font-size:19px;font-weight:700;line-height:1.15">Cuchillas láser Super Platinum</div><div style="position:absolute;bottom:20px;left:20px;font-size:40px;font-weight:700">7,99 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Oferta limitada</span></div>
+      <div class="promo" style="background:#eef0e6;color:#2b2b2b"><div style="font-size:19px;font-weight:700;line-height:1.15">Emulsión re-hidratante</div><div style="position:absolute;bottom:20px;left:20px;font-size:40px;font-weight:700">10,95 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Oferta top</span></div>
+      <div class="promo" style="background:#dfe9d6;color:#2b2b2b"><div style="font-size:19px;font-weight:700;line-height:1.15">Cera depilatoria Roll-on</div><div style="font-size:11px">Piel vegana</div><div style="position:absolute;bottom:20px;left:20px;font-size:40px;font-weight:700">1,10 €</div><span class="badge" style="position:absolute;bottom:20px;right:20px">Nuevo</span></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fafaf7;padding:48px 0">
+  <div class="wrap">
+    <h2 style="font-size:28px;font-weight:600;margin:0 0 24px">Nuevos productos</h2>
+    <div class="grid4" style="gap:20px">
+      <div class="card" style="padding:18px">
+        <div class="ph" style="height:200px">Imagen producto</div>
+        <div style="margin-top:14px"><span class="badge">20%</span></div>
+        <div style="font-size:12px;font-weight:600;margin:10px 0 6px;line-height:1.4">KEENWELL - NEURO-K ACEITE ESENCIAL CALMNESS 30ML</div>
+        <div style="font-size:18px;font-weight:700;color:#4d5340">14,30 €</div>
+        <div style="font-size:11px;color:#777;margin:8px 0 12px">Próxima desde 50,00 €</div>
+        <button class="btn" style="width:100%">COMPRAR</button>
+      </div>
+      <div class="card" style="padding:18px">
+        <div class="ph" style="height:200px">Imagen producto</div>
+        <div style="margin-top:14px"><span class="badge">20%</span></div>
+        <div style="font-size:12px;font-weight:600;margin:10px 0 6px;line-height:1.4">KEENWELL - NEURO-K ACEITE ESENCIAL CALMNESS 30ML</div>
+        <div style="font-size:18px;font-weight:700;color:#4d5340">14,30 €</div>
+        <div style="font-size:11px;color:#777;margin:8px 0 12px">Próxima desde 50,00 €</div>
+        <button class="btn" style="width:100%">COMPRAR</button>
+      </div>
+      <div class="card" style="padding:18px">
+        <div class="ph" style="height:200px">Imagen producto</div>
+        <div style="margin-top:14px"><span class="badge">20%</span></div>
+        <div style="font-size:12px;font-weight:600;margin:10px 0 6px;line-height:1.4">KEENWELL - NEURO-K ACEITE ESENCIAL CALMNESS 30ML</div>
+        <div style="font-size:18px;font-weight:700;color:#4d5340">14,30 €</div>
+        <div style="font-size:11px;color:#777;margin:8px 0 12px">Próxima desde 50,00 €</div>
+        <button class="btn" style="width:100%">COMPRAR</button>
+      </div>
+      <div class="card" style="padding:18px">
+        <div class="ph" style="height:200px">Imagen producto</div>
+        <div style="margin-top:14px"><span class="badge">20%</span></div>
+        <div style="font-size:12px;font-weight:600;margin:10px 0 6px;line-height:1.4">KEENWELL - NEURO-K ACEITE ESENCIAL CALMNESS 30ML</div>
+        <div style="font-size:18px;font-weight:700;color:#4d5340">14,30 €</div>
+        <div style="font-size:11px;color:#777;margin:8px 0 12px">Próxima desde 50,00 €</div>
+        <button class="btn" style="width:100%" disabled>AGOTADO</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 0 24px">
+  <div class="wrap grid3" style="grid-template-rows:auto auto">
+    <div class="bento" style="grid-column:span 2;background:#e8e4d6;min-height:420px;padding:44px;color:#1e1e1e">
+      <div style="font-size:48px;font-weight:600;line-height:1.05">Tratamientos<br>capilares<br>premium</div>
+      <div style="font-size:14px;margin-top:14px;max-width:300px">Soluciones personalizadas para cada necesidad y cada cabello.</div>
+      <div class="ph" style="position:absolute;left:44px;right:44px;bottom:24px;height:130px;background:#d3cdb8">Imagen: gama tratamientos capilares</div>
+    </div>
+    <div class="bento" style="background:#8f9b7e;min-height:420px;padding:44px;color:#fff">
+      <div style="font-size:40px;font-weight:700;line-height:1.05">Ragnar<br>S-tech</div>
+      <div style="font-size:13px;margin-top:12px">Máquina de retoque profesional con motor vectorial de 12.000 rpm.</div>
+      <div class="ph" style="position:absolute;left:44px;right:44px;bottom:24px;height:220px;background:#7d8a6e;color:#e8ecdf">Imagen: Ragnar S-tech</div>
+    </div>
+    <div class="bento" style="background:#d9d4ea;height:300px;padding:36px;color:#1e1e1e">
+      <div style="font-size:36px;font-weight:700;line-height:1.05">Neuro-K</div>
+      <div style="font-size:13px;margin-top:8px">La ciencia de la belleza</div>
+      <div class="ph" style="position:absolute;right:20px;top:90px;width:200px;height:170px;background:#c7c0dc">Imagen: Neuro-K</div>
+    </div>
+    <div class="bento" style="background:#c79b4a;height:300px;padding:36px;color:#fff">
+      <div style="font-size:36px;font-weight:700;line-height:1.05">Colección<br>Synergy Lift</div>
+      <div style="font-size:13px;margin-top:8px">Línea de gama premium</div>
+      <div class="ph" style="position:absolute;right:20px;top:110px;width:200px;height:150px;background:#b5863e;color:#fff">Imagen: Synergy Lift</div>
+    </div>
+    <div class="bento" style="background:#f0d3d6;height:300px;padding:36px;color:#1e1e1e">
+      <div style="font-size:36px;font-weight:600;line-height:1.05">Cera<br>Roll-on</div>
+      <div style="font-size:13px;margin-top:8px">La ciencia de la belleza</div>
+      <div class="ph" style="position:absolute;right:20px;top:110px;width:200px;height:150px;background:#e4bcc1">Imagen: Cera Roll-on</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:8px 0 56px">
+  <div class="wrap">
+    <div class="bento" style="min-height:300px;background:#e9e28f;padding:44px 56px;box-sizing:border-box;color:#1e1e1e">
+      <div style="font-size:30px;font-weight:500">hasta</div>
+      <div style="font-size:120px;font-weight:800;line-height:.95">60%</div>
+      <div style="font-size:40px;font-weight:700">OFF</div>
+      <div style="font-size:15px;margin-top:6px">en producto seleccionado</div>
+      <div class="ph" style="position:absolute;right:56px;top:36px;width:460px;max-width:40%;height:230px;background:#dcd679">Imagen: productos en oferta</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:24px 0 56px">
+  <div class="wrap">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#5d6749">✔ OPINIONES VERIFICADAS EN GOOGLE</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:10px 0 18px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:28px;font-weight:600">Lo que opinan nuestros clientes</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">TiendaEsteticaPro.com</div>
+      </div>
+      <div style="text-align:right"><div style="font-size:26px;font-weight:700">4.9 <span style="font-size:13px;color:#888">/5</span></div><div style="font-size:11px;color:#888">Basado en 52 opiniones</div></div>
+    </div>
+    <div class="grid3">
+      <div class="card" style="padding:22px"><div style="font-size:13px;font-weight:600">Cliente verificado</div><div style="color:#d9a520;font-size:12px;margin:4px 0 12px">★★★★★</div><div style="font-size:13px;line-height:1.6;color:#444">Atención y comunicación, tras una compra online, a través del correo electrónico, inmediata y exquisita. El paquete llegó en perfectísimo estado y embalaje.</div><div style="font-size:11px;color:#999;margin-top:14px">Hace 3 meses</div></div>
+      <div class="card" style="padding:22px"><div style="font-size:13px;font-weight:600">Cliente verificado</div><div style="color:#d9a520;font-size:12px;margin:4px 0 12px">★★★★★</div><div style="font-size:13px;line-height:1.6;color:#444">Muy recomendable, trato personalizado y profesional. Buena relación calidad-precio con una amplia gama de productos.</div><div style="font-size:11px;color:#999;margin-top:14px">Hace 3 meses</div></div>
+      <div class="card" style="padding:22px"><div style="font-size:13px;font-weight:600">Cliente verificado</div><div style="color:#d9a520;font-size:12px;margin:4px 0 12px">★★★★★</div><div style="font-size:13px;line-height:1.6;color:#444">Muy profesionales en su trabajo, con un trato cálido. Llevo años usándolos y estoy encantada.</div><div style="font-size:11px;color:#999;margin-top:14px">Hace 4 meses</div></div>
+    </div>
+    <div style="text-align:right;margin-top:16px"><button class="btn">Ver todas las opiniones en Google →</button></div>
+  </div>
+</section>
+
+<section style="padding:24px 0 48px">
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;color:#7d7d7d;font-size:20px;font-weight:700;letter-spacing:.02em">
+    <span>KEENWELL</span><span>eva PROFESSIONAL</span><span>MAYSTAR</span><span>Depilflax</span><span>Starpil</span>
+  </div>
+</section>
+
+<section style="border-top:1px solid #eee;padding:44px 0 60px">
+  <div class="wrap" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px">
+    <div><div class="ph" style="width:56px;height:56px;border-radius:50%;margin-bottom:14px">Icono</div><div class="trust">Envíos en 48/72 h</div><div style="font-size:13px;color:#666;margin-top:4px">Península y Portugal</div></div>
+    <div><div class="ph" style="width:56px;height:56px;border-radius:50%;margin-bottom:14px">Icono</div><div class="trust">Pago seguro</div><div style="font-size:13px;color:#666;margin-top:4px">Pago 100% SSL</div></div>
+    <div><div class="ph" style="width:56px;height:56px;border-radius:50%;margin-bottom:14px">Icono</div><div class="trust">Atención personalizada</div><div style="font-size:13px;color:#666;margin-top:4px">Atención directa</div></div>
+    <div><div class="ph" style="width:56px;height:56px;border-radius:50%;margin-bottom:14px">Icono</div><div class="trust">Envíos gratuitos</div><div style="font-size:13px;color:#666;margin-top:4px">En pedidos superiores a 60€</div></div>
+  </div>
+</section>
+
+<footer style="background:#2f3428;color:#d8dccb;padding:40px 0;font-size:13px">
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <span style="font-weight:600">Tienda Estética Pro</span>
+    <span>Atención al cliente · Política de envíos · Aviso legal · Blog</span>
+  </div>
+</footer>
+
+</body>
+</html>
