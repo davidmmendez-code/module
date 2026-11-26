@@ -1,0 +1,95 @@
+# Temáticas, búsquedas y fuentes.
+#
+# Cada búsqueda puede tener UNA fuente (campos directos) o VARIAS en 'fuentes:'.
+# Los filtros (incluir, excluir, antiguedad_max_dias) se aplican a todas sus fuentes.
+#
+# Tipos de fuente:
+#   google_news -> consulta: texto de búsqueda de Google News ("frase", OR, paréntesis)
+#   rss         -> url: un feed RSS
+#   web         -> url: página de listados; cada enlace con texto suficiente es un resultado
+#
+# Campos opcionales:
+#   frecuencia: 6h | 1d | 1w        (búsqueda o temática; si no, 1d)
+#   incluir:  [palabras]            (basta que aparezca una)
+#   excluir:  [palabras]            (no puede aparecer ninguna)
+#   prioridad: alta | media | baja  (alta = además sale por consola)
+#   antiguedad_max_dias: 30         (descarta noticias más viejas; no aplica a fuentes web)
+#   activa: false                   (pausar sin borrar)
+#
+# Añadir una temática nueva: copia un bloque 'temas:' y cambia nombre, búsquedas y fuentes.
+# Las fuentes marcadas como "verificar" son URLs que todavía no he podido comprobar: revisa que existan antes de activarlas.
+
+temas:
+  - nombre: Subastas
+    frecuencia: 1d
+    busquedas:
+      - nombre: Inmuebles en subasta Madrid
+        prioridad: alta
+        incluir: [subasta]
+        excluir: [coche, vehículo]
+        antiguedad_max_dias: 60
+        fuentes:
+          - fuente: google_news
+            consulta: '"subasta" (piso OR vivienda OR inmueble) Madrid (judicial OR notarial OR BOE)'
+          - fuente: web
+            url: "https://subastas.boe.es/"          # Portal de Subastas BOE (judiciales, notariales y AEAT)
+          - fuente: web
+            url: "https://sede.agenciatributaria.gob.es/Sede/deudas-apremios-embargos-subastas/subastas/general.html"
+
+      - nombre: Vehículos en subasta
+        prioridad: media
+        incluir: [subasta]
+        antiguedad_max_dias: 60
+        fuentes:
+          - fuente: google_news
+            consulta: '"subasta" (coche OR vehículo OR turismo) (judicial OR BOE OR pública)'
+          - fuente: web
+            url: "https://subastas.boe.es/"
+          - fuente: google_news
+            consulta: 'Seguridad Social subasta vehículos embargados'
+
+      - nombre: Portales privados de subastas
+        prioridad: media
+        incluir: [subasta]
+        antiguedad_max_dias: 60
+        fuentes:
+          - fuente: web
+            url: "https://www.viasubasta.com/subastas"  # verificar: no accesible desde el sandbox
+          - fuente: web
+            url: "https://www.escrapalia.com/"       # verificar
+          - fuente: web
+            url: "https://www.diariodesubastas.com/" # verificar
+          - fuente: google_news
+            consulta: 'viasubasta subasta'           # verificar: no he podido confirmar el portal
+          - fuente: google_news
+            consulta: 'Alerta Subastas subasta inmueble'
+
+      - nombre: Subastas de bancos y servicers
+        prioridad: media
+        incluir: [subasta, inmueble, vivienda, piso]
+        antiguedad_max_dias: 60
+        fuentes:
+          - fuente: google_news
+            consulta: 'subasta activos bancarios Sareb Servihabitat Haya Altamira Solvia Aliseda'
+          - fuente: google_news
+            consulta: 'Reyal Urbis subasta suelos Escrapalia'
+
+      - nombre: Subastas municipales
+        prioridad: baja
+        incluir: [subasta]
+        antiguedad_max_dias: 60
+        fuentes:
+          - fuente: web
+            url: "https://www.zaragoza.es/web/hacienda-economia/portal/subastas/"
+          - fuente: google_news
+            consulta: 'ayuntamiento subasta bienes embargados inmueble vehículo'
+
+  - nombre: Interés
+    frecuencia: 1d
+    busquedas:
+      - nombre: Inteligencia artificial en España
+        prioridad: media
+        antiguedad_max_dias: 2
+        fuentes:
+          - fuente: google_news
+            consulta: '"inteligencia artificial" España'
